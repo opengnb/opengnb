@@ -291,6 +291,16 @@ i|0|172.104.91.191|9001
 ## GNB在OpenWRT上
 Note:注：charleschan<hollidgelongsun157@gmail.com>(https://github.com/orgs/opengnb/people/charleschan2006-alias) 为 OpenGNB 移植到 OpenWRT 平台做出了巨大努力，并提供了技术支持。
 
+## GNB在OpenWRT上本地编译
+
+如果你的OpenWRT本地安装有GCC，你可以在本地编译OpenWRT。在一台安装有OpenWRT 25的Intel主机上测试成功。
+**注意：** 你需要安装并启用 `kmod-tun` 内核模块。
+
+```
+git clone https://github.com/gnbdev/opengnb.git
+cd opengnb
+make -f Makefile.openwrt_local install
+```
 
 ## GNB 在 Linux 发行版上
 

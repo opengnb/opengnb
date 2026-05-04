@@ -292,6 +292,16 @@ i|0|172.104.91.191|9001
 Note:charleschan<hollidgelongsun157@gmail.com>(https://github.com/orgs/opengnb/people/charleschan2006-alias) made great efforts for OpenGNB porting to OpenWRT platform and provides technical supoort.
 GNB supports the OpenWRT platform and needs to be compiled by the user.
 
+## GNB local compiling on OpenWRT
+
+You can compile locally on OpenWRT if you have GCC installed. Tested on an Intel box with OpenWRT 25 installed.
+**Note:** You may need to install `kmod-tun` if you haven't installed it previously.
+
+```
+git clone https://github.com/gnbdev/opengnb.git
+cd opengnb
+make -f Makefile.openwrt_local install
+```
 
 ## GNB on Linux distributions
 
