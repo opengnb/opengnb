@@ -31,62 +31,92 @@
 #define CTL_BLOCK_ES_MAGIC_IDX 3
 #define CTL_BLOCK_VT_MAGIC_IDX 4
 
+/* entry_table256 用 uint64_t:偏移可超过 4GB。
+   索引从 2 开始,留出 0,1 两个 uint64_t 共 16 个字节,
+   用于 file magic number */
+#define GNB_CTL_ENTRY_TABLE_SIZE  (sizeof(uint64_t) * 256)
+
+#define GNB_CTL_MAGIC_NUMBER  2
+#define GNB_CTL_CONF          3
+#define GNB_CTL_CORE          4
+#define GNB_CTL_STATUS        5
+#define GNB_CTL_NODE          6
+
 typedef struct _gnb_ctl_magic_number_t {
-	unsigned char data[16];
+    unsigned char data[16];
 } gnb_ctl_magic_number_t;
 
 typedef struct _gnb_ctl_conf_zone_t {
-	unsigned char name[8];
-	gnb_conf_t conf_st;
+    unsigned char name[8];
+    gnb_conf_t conf_st;
 } gnb_ctl_conf_zone_t;
 
 typedef struct _gnb_ctl_core_zone_t {
-	unsigned char name[8];
-	gnb_uuid_t local_uuid;
-	unsigned char ed25519_private_key[64];
-	unsigned char ed25519_public_key[32];
-	uint32_t  tun_if_id;
-	unsigned char ifname[256];
-	unsigned char if_device_string[256];
-	unsigned char wan6_addr[16];
-	uint16_t wan6_port;   //网络字节序
-	unsigned char wan4_addr[4];
-	uint16_t wan4_port;   //网络字节序
-	gnb_log_ctx_t log_ctx_st;
-	unsigned char index_address_block[ sizeof(gnb_address_list_t) + sizeof(gnb_address_t) * GNB_MAX_ADDR_RING ];
-	unsigned char ufwd_address_block[ sizeof(gnb_address_list_t) + sizeof(gnb_address_t) * 16 ];
-	unsigned char  tun_payload_block[ GNB_PAYLOAD_BUFFER_PADDING_SIZE + sizeof(gnb_payload16_t) + GNB_MAX_PAYLOAD_BLOCK_SIZE ];
-	unsigned char inet_payload_block[ GNB_PAYLOAD_BUFFER_PADDING_SIZE + sizeof(gnb_payload16_t) + GNB_MAX_PAYLOAD_BLOCK_SIZE ];
-	unsigned char pf_worker_payload_blocks[0];
+    unsigned char name[8];
+    gnb_uuid_t local_uuid;
+	
+	#define GNB_CORE_FLAG_UNSET    0
+	#define GNB_CORE_FLAG_START    1
+	#define GNB_CORE_FLAG_RESTART  2
+	#define GNB_CORE_FLAG_RESTORTE 3
+	#define GNB_CORE_FLAG_STOP     4
+	volatile uint32_t gnb_core_flag;
+
+    #define GNB_LOG_TRIGGER_UNSET  (0x0)
+	#define GNB_LOG_TRIGGER_SETUP  (0x1)
+	#define GNB_LOG_TRIGGER_ROTATE (0x1 << 1)
+	volatile uint32_t log_trigger;
+
+    unsigned char ed25519_private_key[64];
+    unsigned char ed25519_public_key[32];
+    uint32_t tun_if_id;
+    unsigned char ifname[256];
+    unsigned char if_device_string[256];
+    unsigned char wan6_addr[16];
+    uint16_t wan6_port;   //网络字节序
+    unsigned char wan4_addr[4];
+    uint16_t wan4_port;   //网络字节序
+    gnb_log_ctx_t log_ctx_st;
+    unsigned char index_address_block[ sizeof(gnb_address_list_t) + sizeof(gnb_address_t) * GNB_MAX_ADDR_RING ];
+    unsigned char ufwd_address_block[ sizeof(gnb_address_list_t) + sizeof(gnb_address_t) * 16 ];
+    unsigned char  tun_payload_block[ GNB_PAYLOAD_BUFFER_PADDING_SIZE + sizeof(gnb_payload16_t) + GNB_MAX_PAYLOAD_BLOCK_SIZE ];
+    unsigned char inet_payload_block[ GNB_PAYLOAD_BUFFER_PADDING_SIZE + sizeof(gnb_payload16_t) + GNB_MAX_PAYLOAD_BLOCK_SIZE ];
+    unsigned char pf_worker_payload_blocks[0];
 } gnb_ctl_core_zone_t;
 
 typedef struct _gnb_ctl_status_zone_t {
-	uint64_t keep_alive_ts_sec;
+    uint64_t keep_alive_ts_sec;
 } gnb_ctl_status_zone_t;
 
 typedef struct _gnb_ctl_node_zone_t {
-	unsigned char name[8];
-	int node_num;
-	gnb_node_t node[0];
+    unsigned char name[8];
+	gnb_uint64_t node_num;
+    gnb_node_t node[0];
 } gnb_ctl_node_zone_t;
 
 typedef struct _gnb_ctl_block_t {
-	uint32_t *entry_table256;
-	gnb_ctl_magic_number_t *magic_number;
-	gnb_ctl_conf_zone_t    *conf_zone;
-	gnb_ctl_core_zone_t    *core_zone;
-	gnb_ctl_status_zone_t  *status_zone;
-	gnb_ctl_node_zone_t    *node_zone;
-	gnb_mmap_block_t       *mmap_block;
+	uint64_t *entry_table256;
+    gnb_ctl_magic_number_t *magic_number;
+    gnb_ctl_conf_zone_t    *conf_zone;
+    gnb_ctl_core_zone_t    *core_zone;
+    gnb_ctl_status_zone_t  *status_zone;
+    gnb_ctl_node_zone_t    *node_zone;
+    gnb_mmap_block_t       *mmap_block;
 } gnb_ctl_block_t;
 
 ssize_t gnb_ctl_file_size(const char *filename);
-gnb_ctl_block_t *gnb_ctl_block_init(gnb_ctl_block_t *ctl_block, void *memory, uint32_t payload_block_size, size_t node_num, uint8_t pf_worker_num);
+uint64_t gnb_ctl_block_size(uint32_t payload_block_size, gnb_uint64_t node_num, uint8_t pf_worker_num);
+gnb_ctl_block_t *gnb_ctl_block_init(gnb_ctl_block_t *ctl_block, void *memory, uint32_t payload_block_size, gnb_uint64_t node_num, uint8_t pf_worker_num);
 void gnb_ctl_block_build_finish(void *memory);
 void gnb_ctl_block_setup(gnb_ctl_block_t *ctl_block, void *memory);
 int gnb_get_ctl_block(gnb_ctl_block_t *ctl_block, const char *ctl_block_file, int flag);
 
-#define MIN_CTL_BLOCK_FILE_SIZE  (sizeof(uint32_t)*256 + sizeof(gnb_ctl_magic_number_t) + sizeof(gnb_ctl_conf_zone_t) + sizeof(gnb_ctl_core_zone_t) + sizeof(gnb_ctl_status_zone_t) + sizeof(gnb_ctl_node_zone_t) + sizeof(gnb_node_t))
+
+#define MIN_CTL_BLOCK_FILE_SIZE  (GNB_CTL_ENTRY_TABLE_SIZE + sizeof(gnb_ctl_magic_number_t) \
+								+ sizeof(gnb_ctl_conf_zone_t) + sizeof(gnb_ctl_core_zone_t) \
+								+ sizeof(gnb_ctl_status_zone_t) + sizeof(gnb_ctl_node_zone_t) \
+								+ sizeof(gnb_node_t))
+
 #define GNB_CTL_KEEP_ALIVE_TS 15
 
 #endif

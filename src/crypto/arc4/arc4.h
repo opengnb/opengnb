@@ -19,8 +19,8 @@
 #define ARC4_H
 
 struct arc4_sbox {
-	unsigned int x;
-	unsigned int y;
+    unsigned int x;
+    unsigned int y;
     unsigned char data[256];
 };
 

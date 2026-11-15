@@ -101,8 +101,8 @@ gnb_node_t * gnb_node_init(gnb_core_t *gnb_core, gnb_uuid_t uuid64) {
 }
 
 void gnb_init_node_key512(gnb_core_t *gnb_core) {
-    int num = gnb_core->ctl_block->node_zone->node_num;
-    int i;
+	gnb_uint64_t num = gnb_core->ctl_block->node_zone->node_num;
+	gnb_uint64_t i;
     gnb_uuid_t uuid64;
     gnb_node_t *node;
     unsigned char buffer[32+4];

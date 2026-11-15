@@ -28,12 +28,12 @@ typedef int (*loop_tun_func_t)(gnb_core_t *gnb_core);
 typedef int (*release_tun_func_t)(gnb_core_t *gnb_core);
 
 typedef struct _gnb_tun_drv_t {
-	init_tun_func_t  init_tun;
-	open_tun_func_t  open_tun;
-	read_tun_func_t  read_tun;
-	write_tun_func_t write_tun;
-	close_tun_func_t close_tun;
-	release_tun_func_t release_tun;
+    init_tun_func_t  init_tun;
+    open_tun_func_t  open_tun;
+    read_tun_func_t  read_tun;
+    write_tun_func_t write_tun;
+    close_tun_func_t close_tun;
+    release_tun_func_t release_tun;
 } gnb_tun_drv_t;
 
 #if defined(__FreeBSD__)

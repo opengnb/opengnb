@@ -836,10 +836,11 @@ void local_node_file_config(gnb_conf_t *conf) {
         conf->index_service_lru_size = 1024*2;
         break;
     }
+    conf->payload_in_block_size = conf->payload_block_size - GNB_PAYLOAD_SAFETY_MARGIN;
 }
 
-size_t gnb_get_node_num_from_file(gnb_conf_t *conf){
-    size_t n = 0;
+gnb_uint64_t gnb_get_node_num_from_file(gnb_conf_t *conf){
+    gnb_uint64_t n = 0;
     FILE *file;
     gnb_uuid_t uuid64;
     char tun_ipv4_string[INET_ADDRSTRLEN+1];
@@ -896,7 +897,7 @@ static void load_route_config(gnb_core_t *gnb_core) {
     snprintf(route_file, PATH_MAX+NAME_MAX, "%s/%s", gnb_core->conf->conf_dir, "route.conf");
     file = fopen(route_file,"r");
     if ( NULL == file ) {
-        GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "miss route.conf\n");
+        GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "miss route.conf: '%s'\n", route_file);
         exit(1);
     }
     char line_buffer[1024+1];

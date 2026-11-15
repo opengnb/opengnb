@@ -52,77 +52,77 @@
 #include "gnb_version.h"
 
 typedef struct _gnb_core_t {
-	gnb_heap_t *heap;
-	gnb_conf_t *conf;
-	gnb_ctl_block_t  *ctl_block;
+    gnb_heap_t *heap;
+    gnb_heap_t *heap_lru32;
+    gnb_conf_t *conf;
+    gnb_ctl_block_t  *ctl_block;
 
-	char *ifname;
-	char *if_device_string;
-	gnb_node_t *local_node;
-	gnb_node_t *select_fwd_node;
+    char *ifname;
+    char *if_device_string;
+    gnb_node_t *local_node;
+    gnb_node_t *select_fwd_node;
 
     gnb_node_ring_t index_node_ring;
-	gnb_node_ring_t fwd_node_ring;
-	gnb_address_ring_t index_address_ring;
-	gnb_address_ring_t fwdu0_address_ring;
+    gnb_node_ring_t fwd_node_ring;
+    gnb_address_ring_t index_address_ring;
+    gnb_address_ring_t fwdu0_address_ring;
 
-	int time_seed_update_factor;
-	unsigned char time_seed[64];
+    int time_seed_update_factor;
+    unsigned char time_seed[64];
 
-	unsigned char *ed25519_private_key;
-	unsigned char *ed25519_public_key;
+    unsigned char *ed25519_private_key;
+    unsigned char *ed25519_public_key;
 
-	uint64_t node_nums;
-	gnb_hash32_map_t *uuid_node_map;   //以节点的uuid64作为key的 node 表
-	gnb_hash32_map_t *ipv4_node_map;
+	gnb_uint64_t node_nums;
+    gnb_hash32_map_t *uuid_node_map;   //以节点的uuid64作为key的 node 表
+    gnb_hash32_map_t *ipv4_node_map;
 
-	gnb_hash32_map_t *subneta_node_ring_map;
-	gnb_hash32_map_t *subnetb_node_ring_map;
-	gnb_hash32_map_t *subnetc_node_ring_map;
+    gnb_hash32_map_t *subneta_node_ring_map;
+    gnb_hash32_map_t *subnetb_node_ring_map;
+    gnb_hash32_map_t *subnetc_node_ring_map;
 
-	//不同主模块可以按照模块内部的方式使用这些表,由使用的相关联的模块来初始化这两组表
-	//这组张表是整型为key
-	gnb_hash32_map_t *int32_map0;
-	gnb_hash32_map_t *int32_map1;
-	gnb_hash32_map_t *int32_map2;
+    //不同主模块可以按照模块内部的方式使用这些表,由使用的相关联的模块来初始化这两组表
+    //这组张表是整型为key
+    gnb_hash32_map_t *int32_map0;
+    gnb_hash32_map_t *int32_map1;
+    gnb_hash32_map_t *int32_map2;
 
-	//这组表是整型为 string
-	gnb_hash32_map_t *string_map0;
-	gnb_hash32_map_t *string_map1;
-	gnb_hash32_map_t *string_map2;
+    //这组表是整型为 string
+    gnb_hash32_map_t *string_map0;
+    gnb_hash32_map_t *string_map1;
+    gnb_hash32_map_t *string_map2;
 
-	int tun_fd;
-	int udp_ipv6_sockets[GNB_MAX_UDP6_SOCKET_NUM];
-	int udp_ipv4_sockets[GNB_MAX_UDP4_SOCKET_NUM];
+    int tun_fd;
+    int udp_ipv6_sockets[GNB_MAX_UDP6_SOCKET_NUM];
+    int udp_ipv4_sockets[GNB_MAX_UDP4_SOCKET_NUM];
 
-	int loop_flag;
-	gnb_tun_drv_t *drv;
+    gnb_tun_drv_t *drv;
 
-	gnb_payload16_t     *inet_payload0;
-	gnb_payload16_t     *tun_payload0;
-	gnb_payload16_t     *inet_payload;
-	gnb_payload16_t     *tun_payload;
+    gnb_payload16_t     *inet_payload0;
+    gnb_payload16_t     *tun_payload0;
+    gnb_payload16_t     *inet_payload;
+    gnb_payload16_t     *tun_payload;
 
-	gnb_worker_t   *primary_worker;
-	gnb_worker_t   *node_worker;
-	gnb_worker_t   *index_worker;
-	gnb_worker_t   *index_service_worker;
-	gnb_worker_t   *detect_worker;
+    gnb_worker_t   *primary_worker;
+    gnb_worker_t   *node_worker;
+    gnb_worker_t   *index_worker;
+    gnb_worker_t   *index_service_worker;
+    gnb_worker_t   *detect_worker;
 
-	gnb_worker_ring_t *pf_worker_ring;
-	//route ip frame 类型的 paylaod 的 head size
-	size_t route_frame_head_size;
+    gnb_worker_ring_t *pf_worker_ring;
+    //route ip frame 类型的 paylaod 的 head size
+    size_t route_frame_head_size;
 
-	//把 tun 数据读入 payload 时给pf过程构建的frame首部预留的空间
-	//这样构建的 payload 可以直接发送出去，尽量避免了pf过程发生内存拷贝
-	size_t tun_payload_offset;
+    //把 tun 数据读入 payload 时给pf过程构建的frame首部预留的空间
+    //这样构建的 payload 可以直接发送出去，尽量避免了pf过程发生内存拷贝
+    size_t tun_payload_offset;
 
-	struct timeval now_timeval;
-	uint64_t now_time_sec;
-	uint64_t now_time_usec;
-	gnb_log_ctx_t    *log;
+    struct timeval now_timeval;
+    uint64_t now_time_sec;
+    uint64_t now_time_usec;
+    gnb_log_ctx_t    *log;
 
-	void *platform_ctx;
+    void *platform_ctx;
 } gnb_core_t;
 
 #define GNB_ADDR_TYPE_NONE              (0x0)

@@ -95,7 +95,7 @@ wait_gnb_init:
 gnb_map_init_success:
     GNB_LOG1(log, GNB_LOG_ID_ES_CORE, "open ctl block success [%s]\n", ctl_block->magic_number->data);
     gnb_node_t *node;
-    int node_num;
+	gnb_uint64_t node_num;
 
     gnb_es_ctx *es_ctx = (gnb_es_ctx *)gnb_heap_alloc(heap,sizeof(gnb_es_ctx));
     memset(es_ctx, 0, sizeof(gnb_es_ctx));

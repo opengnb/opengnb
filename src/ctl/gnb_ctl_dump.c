@@ -56,12 +56,12 @@ void gnb_ctl_dump_status(gnb_ctl_block_t *ctl_block, gnb_uuid_t in_nodeid, uint8
     gnb_address_list_t *resolv_address_list;
     gnb_address_list_t *push_address_list;
     gnb_node_t *node;
-    int node_num;
+	gnb_uint64_t node_num;
     char address_string1[GNB_IP6_PORT_STRING_SIZE];
     char gnb_hex256_str1[256+1];
     char gnb_hex256_str2[256+1];
     node_num = ctl_block->node_zone->node_num;
-    printf("node_num[%d]\n",node_num);
+    printf("node_num[%llu]\n",node_num);
     printf("wan6_port[%d]\n", ntohs(ctl_block->core_zone->wan6_port));
     printf("wan4_port[%d]\n", ntohs(ctl_block->core_zone->wan4_port));
     int i,j;
@@ -272,11 +272,12 @@ void gnb_ctl_dump_address_list(gnb_ctl_block_t *ctl_block, gnb_uuid_t in_nodeid,
     gnb_address_list_t *resolv_address_list;
     gnb_address_list_t *push_address_list;
     gnb_node_t *node;
-    int node_num;
+	gnb_uint64_t node_num;
     char address_string1[GNB_IP6_PORT_STRING_SIZE];
     node_num = ctl_block->node_zone->node_num;
 
-    int i,j;
+	gnb_uint64_t i;
+	int j;
     for ( i=0; i<node_num; i++ ) {
         node = &ctl_block->node_zone->node[i];
         if ( 0 == in_nodeid ) {

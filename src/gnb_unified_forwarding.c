@@ -63,49 +63,34 @@ int gnb_unified_forwarding_tun(gnb_core_t *gnb_core, gnb_pf_ctx_t *pf_ctx) {
     uint16_t in_payload_size;
     gnb_unified_forwarding_frame_foot_t *unified_forwarding_frame_foot;
     gnb_node_t *unified_forwarding_node;
-
     dst_node = pf_ctx->dst_node;
     payload  = pf_ctx->fwd_payload;
-
     gnb_setup_unified_forwarding_nodeid(gnb_core, dst_node);
-
     if ( 0 == dst_node->unified_forwarding_nodeid ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "unified forwarding from tun dst=%llu nodeid not found!\n", dst_node->uuid64);
         return -1;
     }
-
     unified_forwarding_node = GNB_HASH32_UINT64_GET_PTR(gnb_core->uuid_node_map, dst_node->unified_forwarding_nodeid);
-
     if ( NULL == unified_forwarding_node ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "Unified Forwarding from tun fwd %llu not found dst=%llu\n", dst_node->unified_forwarding_nodeid, dst_node->uuid64);
         return -2;
     }
-
-    in_payload_size = gnb_payload16_size(payload);
-
+    in_payload_size = GNB_PAYLOAD16_FRAME_SIZE(payload);
     unified_forwarding_frame_foot = ( (void *)payload ) + in_payload_size;
-
     payload->sub_type = payload->sub_type | GNB_PAYLOAD_SUB_TYPE_IPFRAME_UNIFIED;
-
     gnb_payload16_set_size( payload, in_payload_size + sizeof(gnb_unified_forwarding_frame_foot_t) );
-
     unified_forwarding_frame_foot->src_nodeid = gnb_htonll(gnb_core->local_node->uuid64);
     unified_forwarding_frame_foot->dst_nodeid = gnb_htonll(dst_node->uuid64);
     unified_forwarding_frame_foot->unified_forwarding_nodeid = gnb_htonll(dst_node->unified_forwarding_nodeid);
-
     if ( dst_node->unified_forwarding_send_seq < gnb_core->now_time_usec ) {
         dst_node->unified_forwarding_send_seq = gnb_core->now_time_usec;
     }
-
     dst_node->unified_forwarding_send_seq++;
-
     unified_forwarding_frame_foot->unified_forwarding_seq = gnb_htonll(dst_node->unified_forwarding_send_seq);
-
     gnb_p2p_forward_payload_to_node(gnb_core, unified_forwarding_node, payload);
     dst_node->unified_forwarding_node_ts_sec = gnb_core->now_time_sec;
 
     GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "*>> Unified Forwarding from tun %llu=>%llu=>%llu seq=%"PRIu64" *>>\n", gnb_core->local_node->uuid64, dst_node->unified_forwarding_nodeid, dst_node->uuid64,  dst_node->unified_forwarding_send_seq);
-
     return 1;
 }
 
@@ -132,7 +117,7 @@ int gnb_unified_forwarding_with_multi_path_tun(gnb_core_t *gnb_core, gnb_pf_ctx_
     dst_node = pf_ctx->dst_node;
     payload  = pf_ctx->fwd_payload;
 
-    in_payload_size = gnb_payload16_size(payload);
+    in_payload_size = GNB_PAYLOAD16_FRAME_SIZE(payload);
     unified_forwarding_frame_foot = ( (void *)payload ) + in_payload_size;
     payload->sub_type = payload->sub_type | GNB_PAYLOAD_SUB_TYPE_IPFRAME_UNIFIED_MULTI_PATH;
     gnb_payload16_set_size( payload, in_payload_size + sizeof(gnb_unified_forwarding_frame_foot_t) );
@@ -184,8 +169,8 @@ int gnb_unified_forwarding_inet(gnb_core_t *gnb_core, gnb_payload16_t *payload) 
     gnb_node_t *unified_forwarding_node;
     uint64_t unified_forwarding_seq;
     uint16_t in_payload_size;
-    in_payload_size = gnb_payload16_size(payload);
-    if ( in_payload_size <= sizeof(gnb_unified_forwarding_frame_foot_t) ) {
+    in_payload_size = GNB_PAYLOAD16_FRAME_SIZE(payload);
+    if ( in_payload_size <= sizeof(gnb_unified_forwarding_frame_foot_t) + GNB_PAYLOAD16_HEAD_SIZE ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "Unified Forwarding inet frame error size=%u\n", in_payload_size);
         return UNIFIED_FORWARDING_ERROR;
     }
@@ -231,8 +216,8 @@ int gnb_unified_forwarding_multi_path_inet(gnb_core_t *gnb_core, gnb_payload16_t
     gnb_node_t *unified_forwarding_node;
     uint64_t unified_forwarding_seq;
     uint16_t in_payload_size;
-    in_payload_size = gnb_payload16_size(payload);
-    if ( in_payload_size <= sizeof(gnb_unified_forwarding_frame_foot_t) ) {
+    in_payload_size = GNB_PAYLOAD16_FRAME_SIZE(payload);
+    if ( in_payload_size <= sizeof(gnb_unified_forwarding_frame_foot_t) + GNB_PAYLOAD16_HEAD_SIZE ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "Unified Forwarding inet frame error size=%u\n", in_payload_size);
         return UNIFIED_FORWARDING_ERROR;
     }

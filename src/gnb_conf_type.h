@@ -54,47 +54,49 @@
 #define GNB_FULL_DETECT_INTERVAL_SEC              367
 
 typedef struct _gnb_conf_t {
-	char conf_dir[PATH_MAX];
-	uint8_t public_index_service;
+    char conf_dir[PATH_MAX];
+    uint8_t public_index_service;
     uint8_t safe_index;
-	uint8_t lite_mode;
-	gnb_uuid_t local_uuid;
-	char binary_dir[PATH_MAX];
-	char map_file[PATH_MAX+NAME_MAX];
-	char pid_file[PATH_MAX+NAME_MAX];
-	char node_cache_file[PATH_MAX+NAME_MAX];
-	char log_path[PATH_MAX];
+    uint8_t lite_mode;
+    #define GNB_CORE_NEW     0
+    #define GNB_CORE_RESTORE 1
+    uint8_t restore;  //GNB_CORE_NEW:全新构建gnb_core,GNB_CORE_RESTORE:恢复旧gnb_core部分数据
+    gnb_uuid_t local_uuid;
+    char binary_dir[PATH_MAX];
+    char map_file[PATH_MAX+NAME_MAX-4];
+    char pid_file[PATH_MAX+NAME_MAX];
+    char node_cache_file[PATH_MAX+NAME_MAX];
 
-	uint8_t console_log_level;
-	uint8_t file_log_level;
-	uint8_t udp_log_level;
+    char log_path[PATH_MAX];
+    uint8_t console_log_level;
+    uint8_t file_log_level;
+    uint8_t udp_log_level;
+    uint8_t core_log_level;
+    uint8_t pf_log_level;
+    uint8_t main_log_level;
+    uint8_t node_log_level;
+    uint8_t index_log_level;
+    uint8_t index_service_log_level;
+    uint8_t detect_log_level;
+	uint8_t log_verbose;
+	uint8_t log_trace;
+    uint8_t log_udp_type;
+    char log_udp_sockaddress4_string[16 + 1 + sizeof("65535") + 1];
 
-	uint8_t core_log_level;
-	uint8_t pf_log_level;
-	uint8_t main_log_level;
-	uint8_t node_log_level;
-	uint8_t index_log_level;
-	uint8_t index_service_log_level;
-	uint8_t detect_log_level;
+    char ifname[256];
 
-	uint8_t log_udp_type;
-	char log_udp_sockaddress4_string[16 + 1 + sizeof("65535") + 1];
+    //根据 IFNAMSIZ 定义设为16
+    char socket_ifname[16];
 
-	char ifname[256];
-
-	//根据 IFNAMSIZ 定义设为16
-	char socket_ifname[16];
-
-	int mtu;
-	unsigned char pf_bits;
-	unsigned char crypto_key_update_interval;
-	unsigned char crypto_passcode[4];
-	
+    int mtu;
+    unsigned char pf_bits;
+    unsigned char crypto_key_update_interval;
+    unsigned char crypto_passcode[4];
+    
     #define GNB_ZIP_AUTO   0
     #define GNB_ZIP_FORCE  1
-	int8_t zip;
-
-	int8_t zip_level; // 0:Z_NO_COMPRESSION 9:Z_BEST_COMPRESSION -1 Z_DEFAULT_COMPRESSION
+    int8_t zip;
+    int8_t zip_level; // 0:Z_NO_COMPRESSION 9:Z_BEST_COMPRESSION -1 Z_DEFAULT_COMPRESSION
 
     #define  GNB_MEMORY_SCALE_TINY    (0x1)
     #define  GNB_MEMORY_SCALE_SMALL   (0x2)
@@ -102,87 +104,96 @@ typedef struct _gnb_conf_t {
     #define  GNB_MEMORY_SCALE_HUGE    (0x4)
     unsigned char memory;
 
-	uint32_t index_service_lru_size;
+    uint32_t index_service_lru_size;
+    
+
     uint32_t payload_block_size;
+    /* 为读缓冲区留出的余量
+      payload_in_block_size 将是 (payload_block_size-GNB_PAYLOAD_SAFETY_MARGIN)
+      此数值提前设好,避免每次将数据读入缓冲区时做一次减法运算
+    */
+    #define GNB_PAYLOAD_SAFETY_MARGIN 128
+    uint32_t payload_in_block_size;
+    
     uint32_t max_heap_fragment;
 
-	unsigned char multi_index_type;
-	unsigned char multi_forward_type;
+    unsigned char multi_index_type;
+    unsigned char multi_forward_type;
 
-	unsigned char if_dump;
-	unsigned char udp_socket_type;
-	uint8_t multi_socket;
-	//用户自定义的 packet filter 模块
-	char pf_route[NAME_MAX];
-	//用户自定义的 packet filter 模块启动选项
-	//uint8_t pf_route_opt;
-	uint8_t pf_route_bits;
-	
+    unsigned char if_dump;
+    unsigned char udp_socket_type;
+    uint8_t multi_socket;
+    //用户自定义的 packet filter 模块
+    char pf_route[NAME_MAX];
+    //用户自定义的 packet filter 模块启动选项
+    //uint8_t pf_route_opt;
+    uint8_t pf_route_bits;
+    
     #define GNB_UNIFIED_FORWARDING_OFF          0
     #define GNB_UNIFIED_FORWARDING_FORCE        1
     #define GNB_UNIFIED_FORWARDING_AUTO         2
     #define GNB_UNIFIED_FORWARDING_SUPER        3
     #define GNB_UNIFIED_FORWARDING_HYPER        4
-	uint8_t unified_forwarding;
+    uint8_t unified_forwarding;
 
-	uint8_t direct_forwarding;
-	uint8_t standard_forwarding;
+    uint8_t direct_forwarding;
+    uint8_t standard_forwarding;
 
     #define GNB_IF_DRV_TYPE_DEFAULT        0x0
     #define GNB_IF_DRV_TYPE_TAP_WINDOWS    0xA
     #define GNB_IF_DRV_TYPE_TAP_WINTUN     0xB
-	uint8_t if_drv;
+    uint8_t if_drv;
 
-	uint8_t activate_tun;
-	uint8_t activate_node_worker;
-	uint8_t activate_index_worker;
-	uint8_t activate_index_service_worker;
-	uint8_t activate_detect_worker;
+    uint8_t activate_tun;
+    uint8_t activate_node_worker;
+    uint8_t activate_index_worker;
+    uint8_t activate_index_service_worker;
+    uint8_t activate_detect_worker;
 
-	uint8_t pf_worker_num;
+    uint8_t pf_worker_num;
 
-	uint8_t universal_relay0;
-	uint8_t universal_relay1;
+    uint8_t universal_relay0;
+    uint8_t universal_relay1;
 
-	char listen_address6_string[46 + 2 + 1 + sizeof("65535") + 1];
-	char listen_address4_string[16 + 1 + sizeof("65535") + 1];
+    char listen_address6_string[46 + 2 + 1 + sizeof("65535") + 1];
+    char listen_address4_string[16 + 1 + sizeof("65535") + 1];
 
-	#define GNB_MAX_UDP6_SOCKET_NUM 4
-	#define GNB_MAX_UDP4_SOCKET_NUM 16
+    #define GNB_MAX_UDP6_SOCKET_NUM 4
+    #define GNB_MAX_UDP4_SOCKET_NUM 16
 
-	//host 格式存放
-	uint16_t udp6_ports[GNB_MAX_UDP6_SOCKET_NUM];
-	uint16_t udp4_ports[GNB_MAX_UDP4_SOCKET_NUM];
+    //host 格式存放
+    uint16_t udp6_ports[GNB_MAX_UDP6_SOCKET_NUM];
+    uint16_t udp4_ports[GNB_MAX_UDP4_SOCKET_NUM];
 
-	//upnp 映射的端口，可由 upnp client 写入
-	uint16_t udp4_ext_ports[GNB_MAX_UDP4_SOCKET_NUM];
+    //upnp 映射的端口，可由 upnp client 写入
+    uint16_t udp4_ext_ports[GNB_MAX_UDP4_SOCKET_NUM];
 
-	uint8_t udp6_socket_num;
-	uint8_t udp4_socket_num;
+    uint8_t udp6_socket_num;
+    uint8_t udp4_socket_num;
 
-	uint16_t pf_woker_in_queue_length;
-	uint16_t pf_woker_out_queue_length;
-	uint16_t node_woker_queue_length;
-	uint16_t index_woker_queue_length;
-	uint16_t index_service_woker_queue_length;
+    uint16_t pf_woker_in_queue_length;
+    uint16_t pf_woker_out_queue_length;
+    uint16_t node_woker_queue_length;
+    uint16_t index_woker_queue_length;
+    uint16_t index_service_woker_queue_length;
 
-	uint16_t port_detect_range;
-	uint16_t port_detect_start;
-	uint16_t port_detect_end;
+    uint16_t port_detect_range;
+    uint16_t port_detect_start;
+    uint16_t port_detect_end;
 
-	uint32_t address_detect_interval_usec;
+    uint32_t address_detect_interval_usec;
     uint32_t full_detect_interval_sec;
-	uint8_t addr_secure;
-	uint8_t daemon;
-	uint8_t systemd_daemon;
-	uint8_t quiet;
+    uint8_t addr_secure;
+    uint8_t daemon;
+    uint8_t systemd_daemon;
+    uint8_t quiet;
 } gnb_conf_t;
 
 
 typedef struct _gnb_conf_ext_lite_t {
-	char *index_address_string;
-	char *node_address_string;
-	char *node_route_string;
+    char *index_address_string;
+    char *node_address_string;
+    char *node_route_string;
 } gnb_conf_ext_lite_t;
 
 #define GNB_CONF_FIELD_SEPARATOR_TYPE_ERROR   -1

@@ -77,6 +77,9 @@ static void handle_post_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *i
 static void handle_request_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_service_worker_in_data);
 
 static void handle_post_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_service_worker_in_data) {
+    if ( GNB_PAYLOAD16_DATA_SIZE(&index_service_worker_in_data->payload_st) < sizeof(post_addr_frame_t) ) {
+        return;
+    }
     index_service_worker_ctx_t *index_service_worker_ctx = gnb_core->index_service_worker->ctx;
     gnb_key_address_t *key_address;
     post_addr_frame_t *post_addr_frame = (post_addr_frame_t *)&index_service_worker_in_data->payload_st.data;
@@ -246,6 +249,9 @@ finish_fill_address:
 }
 
 static void handle_request_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_service_worker_in_data) {
+    if ( GNB_PAYLOAD16_DATA_SIZE(&index_service_worker_in_data->payload_st) < sizeof(request_addr_frame_t) ) {
+        return;
+    }
     index_service_worker_ctx_t *index_service_worker_ctx = gnb_core->index_service_worker->ctx;
     request_addr_frame_t *request_addr_frame = (request_addr_frame_t *)&index_service_worker_in_data->payload_st.data;
     gnb_sockaddress_t *sockaddress = &index_service_worker_in_data->node_addr_st;
@@ -384,6 +390,7 @@ static void* thread_worker_func( void *data ) {
         handle_recv_queue(gnb_core);
         GNB_SLEEP_MILLISECOND(150);
     } while(gnb_index_service_worker->thread_worker_flag);
+    gnb_index_service_worker->thread_worker_run_flag = 0;
     return NULL;
 }
 
@@ -396,7 +403,7 @@ static void init(gnb_worker_t *gnb_worker, void *ctx) {
     index_service_worker_ctx->gnb_core = gnb_core;
     index_service_worker_ctx->index_frame_payload = (gnb_payload16_t *)gnb_heap_alloc(gnb_core->heap, gnb_core->conf->payload_block_size);
     index_service_worker_ctx->index_frame_payload->type = GNB_PAYLOAD_TYPE_INDEX;
-    index_service_worker_ctx->lru  = gnb_lru32_create(gnb_core->heap, gnb_core->conf->index_service_lru_size, sizeof(gnb_key_address_t));
+    index_service_worker_ctx->lru  = gnb_lru32_create(gnb_core->heap_lru32, gnb_core->conf->index_service_lru_size, sizeof(gnb_key_address_t));
     memory_size = gnb_ring_buffer_fixed_sum_size(GNB_INDEX_SERVICE_WORKER_QUEUE_BLOCK_SIZE, gnb_core->conf->index_service_woker_queue_length);
     memory = gnb_heap_alloc(gnb_core->heap, memory_size);
     gnb_worker->ring_buffer_in = gnb_ring_buffer_fixed_init(memory, GNB_INDEX_SERVICE_WORKER_QUEUE_BLOCK_SIZE, gnb_core->conf->index_service_woker_queue_length);
@@ -422,6 +429,7 @@ static int stop(gnb_worker_t *gnb_worker) {
     gnb_core_t *gnb_core = index_service_worker_ctx->gnb_core;
     gnb_worker_t *index_service_worker = gnb_core->index_service_worker;
     index_service_worker->thread_worker_flag = 0;
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_INDEX_SERVICE_WORKER, "try to stop %s ...\n", gnb_worker->name);
     return 0;
 }
 

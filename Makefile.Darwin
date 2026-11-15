@@ -1,5 +1,4 @@
 GNB_CFLAGS=$(CFLAGS) -O2 -I./src  -I./libs -I./libs/miniupnpc -I./libs/libnatpmp -I./libs/zlib -D NO_GZIP=1 -Wno-deprecated-non-prototype
-
 GNB_LDFLAGS=-L/usr/lib
 GNB_ES_LDFLAGS=-L/usr/lib
 

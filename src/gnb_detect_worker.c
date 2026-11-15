@@ -135,7 +135,7 @@ static void detect_loop(gnb_worker_t *gnb_detect_worker) {
     gnb_node_t *node;
     uint64_t time_difference;
     uint64_t full_detect_time_difference;
-    size_t num = gnb_core->ctl_block->node_zone->node_num;
+	uint64_t num = gnb_core->ctl_block->node_zone->node_num;
     if ( 0==num ) {
         return;
     }
@@ -209,6 +209,7 @@ static void* thread_worker_func( void *data ) {
             GNB_SLEEP_MILLISECOND(1000);
         }
     } while(gnb_detect_worker->thread_worker_flag);
+    gnb_detect_worker->thread_worker_run_flag = 0;
     return NULL;
 }
 
@@ -220,7 +221,7 @@ static void init(gnb_worker_t *gnb_worker, void *ctx){
     detect_worker_ctx->index_frame_payload->type = GNB_PAYLOAD_TYPE_INDEX;
     detect_worker_ctx->gnb_core = (gnb_core_t *)ctx;
     gnb_worker->ctx = detect_worker_ctx;
-    GNB_LOG1(gnb_core->log,GNB_LOG_ID_DETECT_WORKER,"%s init finish\n", gnb_worker->name);
+    GNB_LOG1(gnb_core->log,GNB_LOG_ID_DETECT_WORKER, "%s init finish\n", gnb_worker->name);
 }
 
 static void release(gnb_worker_t *gnb_worker){
@@ -240,6 +241,7 @@ static int stop(gnb_worker_t *gnb_worker){
     gnb_core_t *gnb_core = detect_worker_ctx->gnb_core;
     gnb_worker_t *gnb_detect_worker = gnb_core->detect_worker;
     gnb_detect_worker->thread_worker_flag = 0;
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_DETECT_WORKER, "try to stop %s ...\n", gnb_worker->name);
     return 0;
 }
 

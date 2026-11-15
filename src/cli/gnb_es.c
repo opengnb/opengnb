@@ -137,8 +137,6 @@ static void setup_log_ctx(gnb_log_ctx_t *log_ctx, char *log_udp_sockaddress4_str
     log_ctx->config_table[GNB_LOG_ID_ES_DISCOVER_IN_LAN].file_level             = GNB_LOG_LEVEL1;
     log_ctx->config_table[GNB_LOG_ID_ES_DISCOVER_IN_LAN].udp_level              = GNB_LOG_LEVEL1;
 
-    gnb_log_udp_open(log_ctx);
-
     log_ctx->log_udp_type = log_udp_type;
     log_ctx->log_payload_type = GNB_ES_PAYLOAD_TYPE_UDPLOG;
 
@@ -146,9 +144,7 @@ static void setup_log_ctx(gnb_log_ctx_t *log_ctx, char *log_udp_sockaddress4_str
         rc = gnb_log_udp_set_addr4_string(log_ctx, log_udp_sockaddress4_string);
         log_ctx->output_type |= GNB_LOG_OUTPUT_UDP;
     }
-
     return;
-
 }
 
 int main (int argc,char *argv[]) {
@@ -299,6 +295,8 @@ int main (int argc,char *argv[]) {
 
     gnb_log_ctx_t log_st;
     setup_log_ctx(&log_st, log_udp_sockaddress4_string, log_udp_type);
+	gnb_log_udp_open(&log_st);
+	
     gnb_es_ctx *es_ctx = gnb_es_ctx_create(heap, service_opt, ctl_block_file, &log_st);
 
     if ( NULL == es_ctx ) {

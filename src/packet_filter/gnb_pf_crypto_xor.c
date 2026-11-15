@@ -132,7 +132,11 @@ static int pf_inet_frame_cb(gnb_core_t *gnb_core, gnb_pf_t *pf, gnb_pf_ctx_t *pf
     if ( !(pf_ctx->fwd_payload->sub_type & GNB_PAYLOAD_SUB_TYPE_IPFRAME_RELAY) ) {
         return pf_ctx->pf_status;
     }
-    payload_size = gnb_payload16_size(pf_ctx->fwd_payload);
+    payload_size = GNB_PAYLOAD16_FRAME_SIZE(pf_ctx->fwd_payload);
+    // 中继报文必须至少包含基础帧头(4B) + 路由头(18B) + 最小IP头(20B) + 末尾UUID(8B) = 50B
+    if ( payload_size < (GNB_PAYLOAD16_HEAD_SIZE + gnb_core->tun_payload_offset + sizeof(struct iphdr) + sizeof(gnb_uuid_t)) ) {
+        return GNB_PF_DROP;
+    }
     gnb_uuid_t src_fwd_nodeid;
     memcpy(&src_fwd_nodeid, ((void *)pf_ctx->fwd_payload + payload_size - sizeof(gnb_uuid_t)), sizeof(gnb_uuid_t));
     pf_ctx->src_fwd_uuid64 = gnb_ntohll(src_fwd_nodeid);

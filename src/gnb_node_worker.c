@@ -146,7 +146,7 @@ static void send_uf_node_notify_frame(gnb_core_t *gnb_core, gnb_node_t *dst_node
 }
 
 static void unifield_forwarding_notify(gnb_core_t *gnb_core, gnb_node_t *dst_node){
-    size_t num = gnb_core->ctl_block->node_zone->node_num;
+	uint64_t num = gnb_core->ctl_block->node_zone->node_num;
     if ( 0 == num ) {
         return;
     }
@@ -206,6 +206,9 @@ static void send_ping_frame(gnb_core_t *gnb_core, gnb_node_t *node) {
 }
 
 static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_worker_in_data) {
+    if ( GNB_PAYLOAD16_DATA_SIZE(&node_worker_in_data->payload_st) < sizeof(node_ping_frame_t) ) {
+        return;
+    }
     gnb_worker_t *primary_worker = gnb_core->primary_worker;
     node_worker_ctx_t *node_worker_ctx = gnb_core->node_worker->ctx;
     node_ping_frame_t *node_ping_frame = (node_ping_frame_t *)&node_worker_in_data->payload_st.data;
@@ -336,6 +339,9 @@ static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
 }
 
 static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_worker_in_data) {
+    if ( GNB_PAYLOAD16_DATA_SIZE(&node_worker_in_data->payload_st) < sizeof(node_pong_frame_t) ) {
+        return;
+    }
     node_worker_ctx_t *node_worker_ctx = gnb_core->node_worker->ctx;
     node_pong_frame_t *node_pong_frame = (node_pong_frame_t *)&node_worker_in_data->payload_st.data;
     gnb_uuid_t src_uuid64 = gnb_ntohll(node_pong_frame->data.src_uuid64);
@@ -491,11 +497,11 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
 static void sync_node(gnb_worker_t *gnb_node_worker) {
     node_worker_ctx_t *node_worker_ctx = gnb_node_worker->ctx;
     gnb_core_t *gnb_core = node_worker_ctx->gnb_core;
-    size_t num = gnb_core->ctl_block->node_zone->node_num;
+	gnb_uint64_t num = gnb_core->ctl_block->node_zone->node_num;
     if ( 0 == num ) {
         return;
     }
-    int i;
+	gnb_uint64_t i;
     gnb_node_t *node;
     for ( i=0; i<num; i++ ) {
         node = &gnb_core->ctl_block->node_zone->node[i];
@@ -643,6 +649,7 @@ static int stop(gnb_worker_t *gnb_worker) {
     gnb_core_t *gnb_core = node_worker_ctx->gnb_core;
     gnb_worker_t *node_worker = gnb_core->node_worker;
     node_worker->thread_worker_flag = 0;
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "try to stop %s ...\n", gnb_worker->name);
     return 0;
 }
 

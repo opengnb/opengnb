@@ -265,7 +265,10 @@ static void detect_node_addr(gnb_worker_t *gnb_index_worker, gnb_node_t *node) {
 }
 
 /*verify and decrypto*/
-static void handle_push_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_worker_in_data){
+static void handle_push_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_worker_in_data) {
+    if ( GNB_PAYLOAD16_DATA_SIZE(&index_worker_in_data->payload_st) < sizeof(push_addr_frame_t) ) {
+        return;
+    }
     gnb_address_list_t *push_address_list;
     gnb_address_list_t *detect_address_list;
     index_worker_ctx_t *index_worker_ctx = gnb_core->index_worker->ctx;
@@ -437,7 +440,7 @@ static void sync_index_node(gnb_worker_t *gnb_index_worker) {
     index_worker_ctx_t *index_worker_ctx = gnb_index_worker->ctx;
     gnb_core_t *gnb_core = index_worker_ctx->gnb_core;
     gnb_node_t *node;
-    size_t num = gnb_core->ctl_block->node_zone->node_num;
+	uint64_t num = gnb_core->ctl_block->node_zone->node_num;
     if ( 0==num ) {
         return;
     }
@@ -470,7 +473,10 @@ static void sync_index_node(gnb_worker_t *gnb_index_worker) {
 }
 
 /*verify and decrypto*/
-static void handle_echo_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_worker_in_data){
+static void handle_echo_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_worker_in_data) {
+    if ( GNB_PAYLOAD16_DATA_SIZE(&index_worker_in_data->payload_st) < sizeof(echo_addr_frame_t) ) {
+        return;
+    }
     index_worker_ctx_t *index_worker_ctx = gnb_core->index_worker->ctx;
     gnb_sockaddress_t *sockaddress = &index_worker_in_data->node_addr_st;
     echo_addr_frame_t *echo_addr_frame = (echo_addr_frame_t *)&index_worker_in_data->payload_st.data;
@@ -543,7 +549,10 @@ static void handle_echo_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *i
 }
 
 /*verify and decrypto*/
-static void handle_detect_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_worker_in_data){
+static void handle_detect_addr_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *index_worker_in_data) {
+    if ( GNB_PAYLOAD16_DATA_SIZE(&index_worker_in_data->payload_st) < sizeof(detect_addr_frame_t) ) {
+        return;
+    }
     gnb_address_list_t *dynamic_address_list;
     index_worker_ctx_t *index_worker_ctx = gnb_core->index_worker->ctx;
     detect_addr_frame_t *detect_addr_frame = (detect_addr_frame_t *)&index_worker_in_data->payload_st.data;
@@ -726,8 +735,8 @@ static void* thread_worker_func( void *data ) {
         sync_index_node(gnb_index_worker);
 next:
         GNB_SLEEP_MILLISECOND(150);
-
     } while(gnb_index_worker->thread_worker_flag);
+    gnb_index_worker->thread_worker_run_flag = 0;
     return NULL;
 }
 
@@ -765,6 +774,7 @@ static int stop(gnb_worker_t *gnb_worker) {
     gnb_core_t *gnb_core = index_worker_ctx->gnb_core;
     gnb_worker_t *index_worker = gnb_core->index_worker;
     index_worker->thread_worker_flag = 0;
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_INDEX_WORKER, "try to stop %s ...\n", gnb_worker->name);
     return 0;
 }
 

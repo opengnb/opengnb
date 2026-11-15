@@ -19,17 +19,6 @@
 #include <string.h>
 #include "gnb_alloc.h"
 
-#ifndef offsetof
-#define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
-#endif
-
-#ifndef container_of
-
-#define container_of(ptr, type, member) ({                                    \
-                      const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
-                       (type *)( (char *)__mptr - offsetof(type,member) );})
-#endif
-
 typedef struct _gnb_heap_fragment_t {
     uint32_t size;
     uint32_t idx;
@@ -37,9 +26,9 @@ typedef struct _gnb_heap_fragment_t {
 } gnb_heap_fragment_t;
 
 gnb_heap_t* gnb_heap_create(uint32_t max_fragment) {
-    gnb_heap_t *gnb_heap = (gnb_heap_t *)malloc( sizeof(gnb_heap_t) + sizeof(gnb_heap_fragment_t) * max_fragment );
+    gnb_heap_t *gnb_heap = (gnb_heap_t *)malloc( sizeof(gnb_heap_t) + sizeof(gnb_heap_fragment_t*) * max_fragment );
     if ( NULL==gnb_heap ) {
-        return NULL;
+        abort();
     }
     memset(gnb_heap, 0, sizeof(gnb_heap_t));
     gnb_heap->max_fragment = max_fragment;
@@ -50,22 +39,22 @@ gnb_heap_t* gnb_heap_create(uint32_t max_fragment) {
 void* gnb_heap_alloc(gnb_heap_t *gnb_heap, uint32_t size) {
     if ( 0 == size ) {
         printf("gnb_heap_alloc fail size is %u\n", size);
-        return NULL;
+        abort();
     }
     if ( gnb_heap->max_fragment == gnb_heap->fragment_nums ) {
         printf("gnb_heap_alloc fail heap is full\n");
-        return NULL;
+        abort();
     }
     /*
     if ( size > (uint32_t)(1024l * 1024l * 1024l * 4) - 1 ) {
         printf("gnb_heap_alloc fail  alloc memory > %u \n", (uint32_t)(1024l * 1024l * 1024l * 4) - 1);
-        return NULL;
+        abort();
     }
     */
     gnb_heap_fragment_t *fragment = malloc(sizeof(gnb_heap_fragment_t) + sizeof(unsigned char) * size);
     if ( NULL == fragment ) {
         printf("gnb_heap_alloc error false\n");
-        return NULL;
+        abort();
     }
     fragment->size = size;
     fragment->idx = gnb_heap->fragment_nums;

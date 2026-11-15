@@ -60,7 +60,7 @@ int gnb_mmap(gnb_mmap_block_t *mmap_block, const char *filename, size_t block_si
         prot = PROT_READ;
     }
     block = mmap(NULL, block_size, prot, MAP_SHARED, fd, 0);
-    if ( NULL==block ) {
+    if ( MAP_FAILED==block ) {
         close(fd);
         return -1;
     }
@@ -78,7 +78,7 @@ int gnb_mmap(gnb_mmap_block_t *mmap_block, const char *filename, size_t block_si
 void gnb_munmap(gnb_mmap_block_t *mmap_block) {
     munmap(mmap_block->block,mmap_block->block_size);
     close(mmap_block->fd);
-    if ( mmap_block->mmap_type & (GNB_MMAP_TYPE_CREATE|GNB_MMAP_TYPE_CLEANEXIT) ) {
+    if ( mmap_block->mmap_type & GNB_MMAP_TYPE_CLEANEXIT ) {
         unlink(mmap_block->filename);
     }
 }

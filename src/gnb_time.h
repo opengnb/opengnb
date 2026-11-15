@@ -47,7 +47,7 @@ int gnb_now_yday();
 #endif
 
 #if defined(_WIN32)
-#define GNB_SLEEP_MILLISECOND(millisecond)	Sleep(millisecond)
+#define GNB_SLEEP_MILLISECOND(millisecond) Sleep(millisecond)
 #endif
 
 #endif

@@ -104,7 +104,7 @@ void* gnb_lru32_get_tail(gnb_lru32_t *lru);
 #define GNB_LRU32_UINT32_PUT(lru,key,data)         gnb_lru32_put(lru, (unsigned char *)(&key), sizeof(uint32_t), data)
 #define GNB_LRU32_UINT32_STORE(lru,key,data,size)  gnb_lru32_store(lru, (unsigned char *)(&key), sizeof(uint32_t), data, (uint32_t)size)
 #define GNB_LRU32_UINT32_FIXED_STORE(lru,key,data) gnb_lru32_fixed_store(lru, (unsigned char *)(&key), sizeof(uint32_t), data)
-#define GNB_LRU32_UINT32_HASH_GET(lru,key)         gnb_lru32_hash_get(lru,(unsigned char *)*&key),sizeof(uint32_t));
+#define GNB_LRU32_UINT32_HASH_GET(lru,key)         gnb_lru32_hash_get(lru,(unsigned char *)(&key),sizeof(uint32_t))
 #define GNB_LRU32_UINT32_GET(lru,key)              gnb_lru32_get(lru,(unsigned char *)(&key),sizeof(uint32_t));
 #define GNB_LRU32_UINT32_POP_BY_KEY(lru,key)       gnb_lru32_pop_by_key(lru, (unsigned char *)(&key), sizeof(uint32_t))
 #define GNB_LRU32_UINT32_MOVETOHEAD(lru,key)       gnb_lru32_movetohead(lru, (unsigned char *)(&key), sizeof(uint32_t))
@@ -114,7 +114,7 @@ void* gnb_lru32_get_tail(gnb_lru32_t *lru);
 #define GNB_LRU32_UINT64_PUT(lru,key,data)         gnb_lru32_put(lru, (unsigned char *)(&key), sizeof(uint64_t), data)
 #define GNB_LRU32_UINT64_STORE(lru,key,data,size)  gnb_lru32_store(lru, (unsigned char *)(&key), sizeof(uint64_t), data, (uint32_t)size)
 #define GNB_LRU32_UINT64_FIXED_STORE(lru,key,data) gnb_lru32_fixed_store(lru, (unsigned char *)(&key), sizeof(uint64_t), data)
-#define GNB_LRU32_UINT64_HASH_GET(lru,key)         gnb_lru32_hash_get(lru,(unsigned char *)*&key),sizeof(uint64_t));
+#define GNB_LRU32_UINT64_HASH_GET(lru,key)         gnb_lru32_hash_get(lru,(unsigned char *)(&key),sizeof(uint64_t))
 #define GNB_LRU32_UINT64_GET(lru,key)              gnb_lru32_get(lru,(unsigned char *)(&key),sizeof(uint64_t));
 #define GNB_LRU32_UINT64_POP_BY_KEY(lru,key)       gnb_lru32_pop_by_key(lru, (unsigned char *)(&key), sizeof(uint64_t))
 #define GNB_LRU32_UINT64_MOVETOHEAD(lru,key)       gnb_lru32_movetohead(lru, (unsigned char *)(&key), sizeof(uint64_t))

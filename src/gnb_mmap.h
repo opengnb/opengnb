@@ -32,16 +32,16 @@
 
 typedef struct _gnb_mmap_block_t {
 #ifdef __UNIX_LIKE_OS__
-	int fd;
+    int fd;
 #endif
 #ifdef _WIN32
-	HANDLE file_descriptor;
-	HANDLE map_handle;
+    HANDLE file_descriptor;
+    HANDLE map_handle;
 #endif
-	char filename[PATH_MAX];
-	void *block;
-	size_t block_size;
-	int mmap_type;
+    char filename[PATH_MAX];
+    void *block;
+    size_t block_size;
+    int mmap_type;
 } gnb_mmap_block_t;
 
 #define GNB_MMAP_TYPE_READONLY               (0x0)

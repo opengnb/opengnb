@@ -111,8 +111,6 @@ void gnb_setup_listen_addr_port(char *listen_address6_string, uint16_t *port_ptr
 #define SET_SAFE_INDEX                 (GNB_OPT_INIT + 52)
 
 int is_self_test = 0;
-int is_verbose   = 0;
-int is_trace     = 0;
 int is_extreme_nat_traversal = 0;
 
 gnb_conf_t* gnb_argv(int argc,char *argv[]) {
@@ -206,8 +204,6 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
     conf->daemon = 0;
     conf->systemd_daemon = 0;
 
-    conf->if_drv = GNB_IF_DRV_TYPE_DEFAULT;
-
     #if defined(__FreeBSD__)
     snprintf(conf->ifname,NAME_MAX,"%s","tun0");
     #endif
@@ -225,7 +221,7 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
     #endif
     #if defined(_WIN32)
     snprintf(conf->ifname,NAME_MAX,"%s","gnb_tun");
-    conf->if_drv = GNB_IF_DRV_TYPE_TAP_WINDOWS;
+	conf->if_drv = GNB_IF_DRV_TYPE_DEFAULT;
     #endif
 
     char *binary_dir;
@@ -351,7 +347,7 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
     int opt;
 
     int option_index = 0;
-
+    optind = 1; // 重置索引
     while (1) {
         opt = getopt_long(argc, argv, "c:n:a:r:PI:b:l:i:46Edp:e:tqvVTh",long_options, &option_index);
         if ( -1 == opt ) {
@@ -429,10 +425,10 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
             is_self_test = 1;
             break;
         case 'V':
-            is_verbose = 1;
+			conf->log_verbose = 1;
             break;
         case 'T':
-            is_trace = 1;
+			conf->log_trace = 1;
             break;
         case SET_SAFE_INDEX:
             conf->safe_index = 1;
@@ -785,6 +781,7 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
         conf->index_service_lru_size = 1024*2;
         break;
     }
+    conf->payload_in_block_size = conf->payload_block_size - GNB_PAYLOAD_SAFETY_MARGIN;
 
     if ( 1 == conf->multi_socket ) {
         conf->udp6_socket_num = 1;
@@ -824,13 +821,13 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
     if ( '\0' != listen_sockaddress6_string[0] ) {
         gnb_setup_listen_addr_port(conf->listen_address6_string, &conf->udp6_ports[0], listen_sockaddress6_string, AF_INET6);
     } else {
-        strncpy(conf->listen_address6_string,"::", sizeof("::")-1);
+        snprintf(conf->listen_address6_string, sizeof(conf->listen_address6_string), "::");
         conf->udp6_ports[0] = 9001;
     }
     if ( '\0' != listen_sockaddress4_string[0] ) {
         gnb_setup_listen_addr_port(conf->listen_address4_string, &conf->udp4_ports[0], listen_sockaddress4_string, AF_INET);
     } else {
-        strncpy(conf->listen_address4_string,"0.0.0.0", sizeof("0.0.0.0")-1);
+        snprintf(conf->listen_address4_string, sizeof(conf->listen_address4_string), "0.0.0.0");
         conf->udp4_ports[0] = 9001;
     }
     if ( '\0' == conf->conf_dir[0] ) {
@@ -848,11 +845,11 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
             snprintf(conf->pid_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.pid",       conf->udp4_ports[0]);
         }
         if ( '\0' == conf->node_cache_file[0] ) {
-            snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX, "%s/node_cache.%d.dump", conf->binary_dir, conf->udp4_ports[0]);
+            snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX, "/tmp/node_cache.%d.dump", conf->udp4_ports[0]);
         }
         #else
         if ( '\0' == conf->map_file[0] ) {
-            snprintf(conf->map_file, PATH_MAX+NAME_MAX, "%s/%s", conf->conf_dir, "gnb.map");
+            snprintf(conf->map_file, PATH_MAX+NAME_MAX-4, "%s/%s", conf->conf_dir, "gnb.map");
         }
         if ( '\0' == conf->pid_file[0] ) {
             snprintf(conf->pid_file, PATH_MAX+NAME_MAX,"%s/%s", conf->conf_dir, "gnb.pid");
@@ -862,21 +859,22 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
         }
         #endif
     } else {
+		//Lite or public index
         conf->conf_dir[0] = '\0';
         #ifdef __UNIX_LIKE_OS__
-        snprintf(conf->pid_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.pid",       conf->udp4_ports[0]);
-        snprintf(conf->map_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.map",       conf->udp4_ports[0]);
+        snprintf(conf->pid_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.pid",         conf->udp4_ports[0]);
+        snprintf(conf->map_file,        PATH_MAX+NAME_MAX-4, "/tmp/gnb.%d.map",         conf->udp4_ports[0]);
         snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX, "/tmp/node_cache.%d.dump", conf->udp4_ports[0]);
         #endif
 
         #ifdef _WIN32
-        snprintf(conf->map_file,        PATH_MAX+NAME_MAX, "%s/gnb.%d.map",         conf->binary_dir, conf->udp4_ports[0]);
+        snprintf(conf->map_file,        PATH_MAX+NAME_MAX-4, "%s/gnb.%d.map",         conf->binary_dir, conf->udp4_ports[0]);
         snprintf(conf->pid_file,        PATH_MAX+NAME_MAX, "%s/gnb.%d.pid",         conf->binary_dir, conf->udp4_ports[0]);
         snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX, "%s/node_cache.%d.dump", conf->binary_dir, conf->udp4_ports[0]);
         #endif
     }
     if ( NULL != ctl_block_file ) {
-        snprintf(conf->map_file,        PATH_MAX+NAME_MAX, "%s",       ctl_block_file);
+        snprintf(conf->map_file,        PATH_MAX+NAME_MAX-4, "%s",       ctl_block_file);
     }
     char  resolved_path[PATH_MAX+NAME_MAX];
     if ( '\0' != conf->conf_dir[0] && NULL != gnb_realpath(conf->conf_dir,resolved_path) ) {

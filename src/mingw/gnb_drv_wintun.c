@@ -298,28 +298,32 @@ static int read_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size) {
     WINTUN_SESSION_HANDLE session = (WINTUN_SESSION_HANDLE)tun_wintun_ctx->session;
     HANDLE WaitHandles[] = { tun_wintun_ctx->hReadEvent, tun_wintun_ctx->hQuitEvent };
     DWORD packet_size;
-    BYTE *packet = WintunReceivePacket(session, &packet_size);
-    if(NULL != packet){
-        size_t real_size = (packet_size > buf_size)?buf_size:packet_size;
-        memcpy(buf, packet, real_size);
-        WintunReleaseReceivePacket(session, packet);
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "read_tun_wintun bufsize:%d, real WintunReceivePacket size:%d!\n", buf_size,  packet_size);
-        return real_size;
-    } else {
-        DWORD LastError  = GetLastError();
-        switch (LastError )
-        {
-            case ERROR_NO_MORE_ITEMS:
-                GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "read_tun_wintun Packet read ERROR_NO_MORE_ITEMS:%ld!\n", LastError);
-                if (WaitForMultipleObjects(_countof(WaitHandles), WaitHandles, FALSE, INFINITE) == WAIT_OBJECT_0){
-                    return ERROR_SUCCESS;
-                }
-                break;        
-            default:
-                GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "read_tun_wintun Packet read failed:%ld!\n", LastError);
-                return LastError;
-        }
-    }
+	//2026-08-27 这两层 switch-case 嵌套 是 Tencent codebuddy 建议改成这样的
+	BYTE *packet = WintunReceivePacket(session, &packet_size);
+	if(NULL != packet){
+		size_t real_size = (packet_size > buf_size)?buf_size:packet_size;
+		memcpy(buf, packet, real_size);
+		WintunReleaseReceivePacket(session, packet);
+		GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "read_tun_wintun bufsize:%d, real WintunReceivePacket size:%d!\n", buf_size,  packet_size);
+		return real_size;
+	} else {
+		DWORD LastError  = GetLastError();
+		switch (LastError )
+		{
+			case ERROR_NO_MORE_ITEMS:
+				GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "read_tun_wintun Packet read ERROR_NO_MORE_ITEMS:%ld!\n", LastError);
+				switch (WaitForMultipleObjects(_countof(WaitHandles), WaitHandles, FALSE, 50)) {
+					case WAIT_OBJECT_0:     // hReadEvent：有包，循环内重读
+					case WAIT_OBJECT_0 + 1: // hQuitEvent：应退出
+						return ERROR_SUCCESS;
+					default:                // WAIT_TIMEOUT 等：直接返回，循环检查退出标志
+						return 0;
+				}
+			default:
+				GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "read_tun_wintun Packet read failed:%ld!\n", LastError);
+				return LastError;
+		}
+	}
     return ERROR_SUCCESS;
 }
 
@@ -347,7 +351,6 @@ static int write_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size) {
 }
 
 static int close_tun_wintun(gnb_core_t *gnb_core) {
-    gnb_core->loop_flag = 0;
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
     if ( !tun_wintun_ctx->skip_if_script ) {
         if_down(gnb_core);

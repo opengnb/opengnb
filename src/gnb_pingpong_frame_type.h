@@ -39,8 +39,8 @@ typedef struct _node_ping_frame_t {
     }data;
     unsigned char src_sign[ED25519_SIGN_SIZE];
 }__attribute__ ((__packed__)) node_ping_frame_t;
-
 #define NODE_PING_FRAME_PAYLOAD_SIZE (sizeof(gnb_payload16_t) + sizeof(node_ping_frame_t))
+
 typedef struct _node_pong_frame_t {
     struct __attribute__((__packed__)) pong_frame_data {
       gnb_uuid_t src_uuid64;   //发送方的uuid64
@@ -57,16 +57,15 @@ typedef struct _node_pong_frame_t {
     }data;
     unsigned char src_sign[ED25519_SIGN_SIZE];
 }__attribute__ ((__packed__)) node_pong_frame_t;
-
 #define NODE_PONG_FRAME_PAYLOAD_SIZE (sizeof(gnb_payload16_t) + sizeof(node_pong_frame_t))
 
 #define GNB_NODE_ATTACHMENT_TYPE_TUN_EMPTY         0x0
 #define GNB_NODE_ATTACHMENT_TYPE_TUN_SOCKADDRESS   0x1
 
 typedef struct _node_attachment_tun_sockaddress_t {
-	uint8_t         tun_addr4[4];;
+    uint8_t         tun_addr4[4];;
     uint16_t        tun_sin_port4;
-	uint8_t         tun_addr6[16];
+    uint8_t         tun_addr6[16];
     uint16_t        tun_sin_port6;
     uint16_t        es_sin_port4;
     uint16_t        es_sin_port6;

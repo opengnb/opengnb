@@ -19,30 +19,21 @@
 #include <string.h>
 #include "gnb_hash32.h"
 
-typedef struct _gnb_hash32_bucket_t{
+typedef struct _gnb_hash32_bucket_t {
     uint32_t chain_len;
     gnb_kv32_t *kv_chain;
-}gnb_hash32_bucket_t;
+} gnb_hash32_bucket_t;
 
 uint32_t murmurhash_hash(unsigned char *data, size_t len);
 
 gnb_hash32_map_t *gnb_hash32_create(gnb_heap_t *heap, uint32_t bucket_num) {
-    gnb_hash32_map_t *hash32_map = gnb_heap_alloc(heap, sizeof(gnb_hash32_map_t));
-    if ( NULL == hash32_map ) {
-        return NULL;
-    }
+    gnb_hash32_map_t *hash32_map = (gnb_hash32_map_t *)gnb_heap_alloc(heap, sizeof(gnb_hash32_map_t));
     memset(hash32_map, 0, sizeof(gnb_hash32_map_t));
     hash32_map->heap = heap;
-    hash32_map->buckets = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_hash32_bucket_t *) * bucket_num);
-    if ( NULL == hash32_map->buckets ) {
-        return NULL;
-    }
+    hash32_map->buckets = (gnb_hash32_bucket_t **)gnb_heap_alloc(hash32_map->heap, sizeof(gnb_hash32_bucket_t *) * bucket_num);
     hash32_map->bucket_num = bucket_num;
     uint32_t i;
     void *p = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_hash32_bucket_t)*bucket_num);
-    if ( NULL == p ) {
-        return NULL;
-    }
     memset(p, 0, sizeof(gnb_hash32_bucket_t)*bucket_num);
     for ( i=0; i<bucket_num; i++ ) {
         hash32_map->buckets[i] = p;
@@ -52,23 +43,34 @@ gnb_hash32_map_t *gnb_hash32_create(gnb_heap_t *heap, uint32_t bucket_num) {
 }
 
 void gnb_hash32_release(gnb_hash32_map_t *hash32_map) {
+    if ( NULL != hash32_map->buckets ) {
+        uint32_t i;
+        for ( i=0; i<hash32_map->bucket_num; i++ ) {
+            gnb_hash32_bucket_t *bucket = hash32_map->buckets[i];
+            if ( NULL == bucket ) {
+                continue;
+            }
+            gnb_kv32_t *kv = bucket->kv_chain;
+            while ( NULL != kv ) {
+                gnb_kv32_t *next = kv->nex;
+                gnb_heap_free(hash32_map->heap, kv);
+                kv = next;
+            }
+        }
+        gnb_heap_free(hash32_map->heap, hash32_map->buckets[0]);
+        gnb_heap_free(hash32_map->heap, hash32_map->buckets);
+    }
     gnb_heap_free(hash32_map->heap, hash32_map);
 }
 
 gnb_kv32_t *gnb_kv32_create(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len, u_char *value, uint32_t value_len) {
-    uint32_t r_key_len;
     uint32_t r_value_len;
-    if ( 0 != key_len ) {
-        r_key_len = key_len;
-    } else {
-        r_key_len = sizeof(void *);
-    }
     if ( 0 != value_len ) {
         r_value_len = value_len;
     } else {
         r_value_len = sizeof(void *);
     }
-    gnb_kv32_t *kv = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_kv32_t) + sizeof(gnb_block32_t) + r_key_len + sizeof(gnb_block32_t) + r_value_len);
+    gnb_kv32_t *kv = (gnb_kv32_t *)gnb_heap_alloc(hash32_map->heap, sizeof(gnb_kv32_t) + sizeof(gnb_block32_t) + key_len + sizeof(gnb_block32_t) + r_value_len);
     if ( NULL == kv ) {
         return NULL;
     }
@@ -83,14 +85,14 @@ gnb_kv32_t *gnb_kv32_create(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t 
         kv->value->size = value_len;
     } else {
         //直接存 void*
-        GNB_BLOCK_VOID(kv->value) = value;
+        GNB_BLOCK_VOID(kv->value, value);
         kv->value->size = 0;
     }
     return kv;
 }
 
-void gnb_kv32_release(gnb_hash32_map_t *hash_map, gnb_kv32_t *kv) {
-    gnb_heap_free(hash_map->heap, kv);
+void gnb_kv32_release(gnb_hash32_map_t *hash32_map, gnb_kv32_t *kv) {
+    gnb_heap_free(hash32_map->heap, kv);
 }
 
 gnb_kv32_t *gnb_hash32_set(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len, void *value, uint32_t value_len) {
@@ -119,9 +121,9 @@ gnb_kv32_t *gnb_hash32_set(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t k
                  memcpy(kv->value->data, value, value_len);
                  kv->value->size = value_len;
             } else {
-                 //直接存 void*
-                 GNB_BLOCK_VOID(kv->value) = value;
-                 kv->value->size = 0;
+                //直接存 void*
+                GNB_BLOCK_VOID(kv->value, value);
+                kv->value->size = 0;
             }
             break;
         }
@@ -172,7 +174,7 @@ int gnb_hash32_store(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len
             if ( 0 != value_len ) {
                 memcpy(kv_chain->value->data, value, value_len);
             } else {
-                GNB_BLOCK_VOID(kv_chain->value) = value;
+                GNB_BLOCK_VOID(kv_chain->value, value);
             }
             //存下当前的 kv ,标记为找到 key 对应的value
             kv = kv_chain;
@@ -181,13 +183,13 @@ int gnb_hash32_store(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len
             //虽然 key 相同,但与原 value 存储的长度不一致
             //先重新创建一个 kv,然后释放原来的 kv,
             kv = gnb_kv32_create(hash32_map, key, key_len, value, value_len);
-            if ( NULL==kv ) {
+            if ( NULL == kv ) {
                 return -1;
             }
+            kv->nex = kv_chain->nex;
             if ( bucket->kv_chain != kv_chain ) {
                 //当 kv_chain 不是 bucket 的第一个kv
-                pre_kv_chain->nex =kv;
-                kv->nex = kv_chain->nex;
+                pre_kv_chain->nex = kv;
             } else {
                 bucket->kv_chain = kv;
             }
@@ -242,7 +244,7 @@ gnb_kv32_t *gnb_hash32_del(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t k
         goto finish;
     }
     gnb_kv32_t *kv_chain = bucket->kv_chain;
-    if ( !memcmp(kv_chain->key->data, key, key_len) ) {
+    if ( (kv_chain->key->size == key_len) && !memcmp(kv_chain->key->data, key, key_len) ) {
         old_kv = kv_chain;
         hash32_map->kv_num--;
         if ( 1 == bucket->chain_len ) {
@@ -279,120 +281,4 @@ gnb_kv32_t *gnb_hash32_del(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t k
 
 finish:
     return old_kv;
-}
-
-gnb_kv32_t **gnb_hash32_array(gnb_hash32_map_t *hash32_map, uint32_t *num) {
-    gnb_kv32_t *kv;
-    gnb_kv32_t ** kv_array = NULL;
-    gnb_hash32_bucket_t *bucket;
-    if ( 0 == hash32_map->kv_num ) {
-        *num = 0;
-        return NULL;
-    }
-    if ( hash32_map->kv_num < (*num) ) {
-        *num = hash32_map->kv_num;
-    }
-    kv_array = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_kv32_t *) * (*num));
-    uint32_t i,j;
-    uint32_t idx = 0;
-    for (i=0; i<hash32_map->bucket_num; i++) {
-        bucket = hash32_map->buckets[i];
-        if ( 0 == bucket->chain_len ) {
-            continue;
-        }
-        kv = bucket->kv_chain;
-        for (j=0; j<bucket->chain_len; j++) {
-            kv_array[idx] = kv;
-            idx++;
-            kv = kv->nex;
-        }
-    }
-    return kv_array;
-}
-
-uint32_t* gnb_hash32_uint32_keys(gnb_hash32_map_t *hash32_map, uint32_t *num) {
-    gnb_kv32_t *kv;
-    uint32_t *uint32_array = NULL;
-    gnb_hash32_bucket_t *bucket;
-    if ( 0 == hash32_map->kv_num ) {
-        *num = 0;
-        return NULL;
-    }
-    if ( hash32_map->kv_num < (*num) ) {
-        *num = hash32_map->kv_num;
-    }
-    uint32_array = gnb_heap_alloc(hash32_map->heap, sizeof(uint32_t) * (*num) );
-    uint32_t i,j;
-    uint32_t idx = 0;
-    for (i=0; i<hash32_map->bucket_num; i++) {
-        bucket = hash32_map->buckets[i];
-        if ( 0 == bucket->chain_len ) {
-            continue;
-        }
-        kv = bucket->kv_chain;
-        for (j=0; j<bucket->chain_len; j++) {
-            uint32_array[idx] = GNB_HASH32_UINT32_KEY(kv);
-            idx++;
-            kv = kv->nex;
-        }
-    }
-    return uint32_array;
-}
-
-uint64_t* gnb_hash32_uint64_keys(gnb_hash32_map_t *hash32_map, uint32_t *num) {
-    gnb_kv32_t *kv;
-    uint64_t *uint64_array = NULL;
-    gnb_hash32_bucket_t *bucket;
-    if ( 0 == hash32_map->kv_num ) {
-        *num = 0;
-        return NULL;
-    }
-    if ( hash32_map->kv_num < (*num) ) {
-        *num = hash32_map->kv_num;
-    }
-    uint64_array = gnb_heap_alloc(hash32_map->heap, sizeof(uint64_t) * (*num) );
-    uint32_t i,j;
-    uint32_t idx = 0;
-    for (i=0; i<hash32_map->bucket_num; i++) {
-        bucket = hash32_map->buckets[i];
-        if ( 0 == bucket->chain_len ) {
-            continue;
-        }
-        kv = bucket->kv_chain;
-        for (j=0; j<bucket->chain_len; j++) {
-            uint64_array[idx] = GNB_HASH32_UINT64_KEY(kv);
-            idx++;
-            kv = kv->nex;
-        }
-    }
-    return uint64_array;
-}
-
-u_char** gnb_hash32_string_keys(gnb_hash32_map_t *hash32_map, uint32_t *num) {
-    gnb_kv32_t *kv;
-    u_char** string_array = NULL;
-    gnb_hash32_bucket_t *bucket;
-    if ( 0 == hash32_map->kv_num ) {
-        *num = 0;
-        return NULL;
-    }
-    if ( hash32_map->kv_num < (*num) ) {
-        *num = hash32_map->kv_num;
-    }
-    string_array = gnb_heap_alloc(hash32_map->heap, sizeof(u_char*) * (*num));
-    uint32_t i,j;
-    uint32_t idx = 0;
-    for (i=0; i<hash32_map->bucket_num; i++) {
-        bucket = hash32_map->buckets[i];
-        if ( 0 == bucket->chain_len ) {
-            continue;
-        }
-        kv = bucket->kv_chain;
-        for (j=0; j<bucket->chain_len; j++) {
-            string_array[idx] = GNB_HASH32_STRING_KEY(kv);
-            idx++;
-            kv = kv->nex;
-        }
-    }
-    return string_array;
 }

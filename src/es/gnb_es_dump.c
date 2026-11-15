@@ -35,7 +35,7 @@ void gnb_es_dump_address_list(gnb_es_ctx *es_ctx) {
     gnb_address_list_t *resolv_address_list;
     gnb_address_list_t *push_address_list;
     gnb_node_t *node;
-    int node_num;
+	gnb_uint64_t node_num;
     gnb_conf_t *conf;
     char address_string1[GNB_IP6_PORT_STRING_SIZE];
     conf = &es_ctx->ctl_block->conf_zone->conf_st;
@@ -52,7 +52,8 @@ void gnb_es_dump_address_list(gnb_es_ctx *es_ctx) {
         return;
     }
 
-    int i,j;
+	gnb_uint64_t i;
+	int j;
     for( i=0; i<node_num; i++ ) {
         node = &es_ctx->ctl_block->node_zone->node[i];
         static_address_list = (gnb_address_list_t *)&node->static_address_block;

@@ -19,21 +19,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <inttypes.h>      /* PRIu64:uint64_t 的跨平台打印 */
 
+#include "gnb_def.h"
 #include "gnb_ctl_block.h"
 #include "gnb_mmap.h"
 #include "gnb_time.h"
 #include "gnb_block.h"
-
-//entry_table256 的类型是 uint32_t,
-//索引从2 开始，留出 0,1 两个 uint32_t 共 8个字节
-//用于 file magic number 和 记录文件的大小
-
-#define GNB_CTL_MAGIC_NUMBER  2
-#define GNB_CTL_CONF          3
-#define GNB_CTL_CORE          4
-#define GNB_CTL_STATUS        5
-#define GNB_CTL_NODE          6
 
 ssize_t gnb_ctl_file_size(const char *filename) {
     struct stat s;
@@ -45,42 +37,160 @@ ssize_t gnb_ctl_file_size(const char *filename) {
     return s.st_size;
 }
 
-gnb_ctl_block_t *gnb_ctl_block_init(gnb_ctl_block_t *ctl_block, void *memory, uint32_t payload_block_size, size_t node_num, uint8_t pf_worker_num) {
-    uint32_t off_set = sizeof(uint32_t)*256;
-    gnb_block32_t *block;
-    ctl_block->entry_table256 = memory;
-    //向量表清零
-    memset(ctl_block->entry_table256, 0, sizeof(uint32_t)*256);
-    ctl_block->entry_table256[GNB_CTL_MAGIC_NUMBER] = off_set;
-    block = memory + ctl_block->entry_table256[GNB_CTL_MAGIC_NUMBER];
-    block->size = sizeof(gnb_ctl_magic_number_t);
-    ctl_block->magic_number = (gnb_ctl_magic_number_t *)block->data;
-    off_set += sizeof(gnb_block32_t) + sizeof(gnb_ctl_magic_number_t);
-    snprintf((char *)ctl_block->magic_number->data, 16, "%s", "GNB MAP File");
-    ctl_block->entry_table256[GNB_CTL_CONF] = off_set;
-    block = memory + ctl_block->entry_table256[GNB_CTL_CONF];
-    block->size = sizeof(gnb_ctl_conf_zone_t);
-    ctl_block->conf_zone = (gnb_ctl_conf_zone_t *)block->data;
-    off_set += sizeof(gnb_block32_t) + sizeof(gnb_ctl_conf_zone_t);
-    snprintf((char *)ctl_block->conf_zone->name,    8, "%s", "CONF");
-    ctl_block->entry_table256[GNB_CTL_CORE] = off_set;
-    block = memory + ctl_block->entry_table256[GNB_CTL_CORE];
-    block->size = sizeof(gnb_ctl_core_zone_t) + ( sizeof(gnb_payload16_t) + payload_block_size + sizeof(gnb_payload16_t) + payload_block_size ) * (1+pf_worker_num);
-    ctl_block->core_zone = (gnb_ctl_core_zone_t *)block->data;
-    off_set += sizeof(gnb_block32_t) + sizeof(gnb_ctl_core_zone_t) + ( sizeof(gnb_payload16_t) + payload_block_size + sizeof(gnb_payload16_t) + payload_block_size ) * (1+pf_worker_num);
-    ctl_block->entry_table256[GNB_CTL_STATUS] = off_set;
-    block = memory + ctl_block->entry_table256[GNB_CTL_STATUS];
-    block->size = sizeof(gnb_ctl_status_zone_t);
-    ctl_block->status_zone = (gnb_ctl_status_zone_t *)block->data;
-    off_set += sizeof(gnb_block32_t) + sizeof(gnb_ctl_status_zone_t);
-    ctl_block->entry_table256[GNB_CTL_NODE] = off_set;
-    block = memory + ctl_block->entry_table256[GNB_CTL_NODE];
-    block->size = sizeof(gnb_ctl_node_zone_t) + sizeof(gnb_node_t)*node_num;
-    ctl_block->node_zone = (gnb_ctl_node_zone_t *)block->data;
-    off_set += sizeof(gnb_block32_t) + sizeof(gnb_ctl_node_zone_t) + sizeof(gnb_node_t)*node_num;
-    snprintf((char *)ctl_block->node_zone->name,    8, "%s", "NODE");
-    ctl_block->node_zone->node_num = node_num;
-    return ctl_block;
+/*
+┌──────────────┬────────────────────────┐
+│              │16bytes file_magic_number│
+│entry_table256├────────────────────────┤
+│              │     block2_offset      │
+│ 64bit * 256  │────────────────────────┤
+│              │     block3_offset      │
+│              │────────────────────────┤
+│              │     block4_offset      │
+│              │────────────────────────┤
+│              │     block5_offset      │
+│              │────────────────────────┤
+│              │     block6_offset      │
+│              │────────────────────────┤
+│              │      ... ... ...       │
+│              │────────────────────────┤
+│              │     block255_offset    │
+├──────────────┼────────────────────────┤
+│              │       block size       │
+│    block2    ├────────────────────────┤
+│              │     magic_number       │
+├──────────────┼────────────────────────┤
+│              │       block size       │
+│    block3    ├────────────────────────┤
+│              │       conf_zone        │
+├──────────────┼────────────────────────┤
+│              │       block size       │
+│    block4    ├────────────────────────┤
+│              │       core_zone        │
+├──────────────┼────────────────────────┤
+│              │       block size       │
+│    block5    ├────────────────────────┤
+│              │      status_zone       │
+├──────────────┼────────────────────────┤
+│              │       block size       │
+│    block6    ├────────────────────────┤
+│              │       node_zone        │
+└──────────────┴────────────────────────┘
+*/
+uint64_t gnb_ctl_block_size(uint32_t payload_block_size, gnb_uint64_t node_num, uint8_t pf_worker_num) {
+	uint64_t offset;
+	/* core zone 尾部紧跟 (1 + pf_worker_num) 组 payload 块.
+	(1 + conf->pf_worker_num) 是为  gnb_ctl_core_zone_t 中的 pf_worker_payload_blocks 预留 share memory 空间中 (primary_worker + pf_worker) 个 memmory block
+	primary_worker 所使用的是 pf_worker_payload_blocks 第1块,后面的块由 pf_worker 依次占用
+	sizeof(gnb_block64_t) * 5 是 share memory 中ctl_block 有5个 zone 的 gnb_block64_t 结构占用的空间
+	*/
+	uint64_t core_payload = (uint64_t)(
+		(sizeof(gnb_payload16_t) + payload_block_size +
+		 sizeof(gnb_payload16_t) + payload_block_size) * (1u + pf_worker_num) );
+
+	/* entry_table256: 最前面 256 个 uint64_t */
+	offset = (uint64_t)GNB_CTL_ENTRY_TABLE_SIZE;
+
+	/* 1) magic number zone: 块头 8 对齐 -> data = 头+8 也 8 对齐 */
+	offset = ALIGN_UP_8(offset);
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_magic_number_t);
+
+	/* 2) conf zone */
+	offset = ALIGN_UP_8(offset);
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_conf_zone_t);
+
+	/* 3) core zone (含尾部 payload 块) */
+	offset = ALIGN_UP_8(offset);
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_core_zone_t) + core_payload;
+
+	/* 4) status zone */
+	offset = ALIGN_UP_8(offset);
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_status_zone_t);
+
+	/* 5) node zone (含尾部 node_num 个 gnb_node_t)
+	   注意先转 uint64_t 再相乘,避免 32 位系统上 size_t 乘法溢出 */
+	offset = ALIGN_UP_8(offset);
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_node_zone_t) + (uint64_t)sizeof(gnb_node_t) * (uint64_t)node_num;
+
+	return offset;   /* 精确总大小, 无任何余量 */
+}
+
+gnb_ctl_block_t *gnb_ctl_block_init(gnb_ctl_block_t *ctl_block, void *memory, uint32_t payload_block_size, gnb_uint64_t node_num, uint8_t pf_worker_num) {
+
+	uint64_t offset;
+
+	uint64_t core_payload = (uint64_t)(
+		(sizeof(gnb_payload16_t) + payload_block_size +
+		 sizeof(gnb_payload16_t) + payload_block_size) * (1u + pf_worker_num) );
+
+	gnb_block64_t *block;
+
+	ctl_block->entry_table256 = memory;
+	memset(ctl_block->entry_table256, 0, GNB_CTL_ENTRY_TABLE_SIZE);
+
+	offset = (uint64_t)GNB_CTL_ENTRY_TABLE_SIZE;
+
+	/* 1) magic number zone */
+	offset = ALIGN_UP_8(offset);                                  /* 块头 8 对齐 */
+	ctl_block->entry_table256[GNB_CTL_MAGIC_NUMBER] = offset;     /* 直接记录头偏移 */
+	block = (gnb_block64_t *)((char *)memory + offset);
+	block->size = sizeof(gnb_ctl_magic_number_t);
+	ctl_block->magic_number = (gnb_ctl_magic_number_t *)block->data;   /* = 头+8, 8 对齐 */
+	snprintf((char *)ctl_block->magic_number->data, 16, "%s", "GNB MAP File");
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_magic_number_t);
+
+	/* 2) conf zone */
+	offset = ALIGN_UP_8(offset);
+	ctl_block->entry_table256[GNB_CTL_CONF] = offset;
+	block = (gnb_block64_t *)((char *)memory + offset);
+	block->size = sizeof(gnb_ctl_conf_zone_t);
+	ctl_block->conf_zone = (gnb_ctl_conf_zone_t *)block->data;
+	snprintf((char *)ctl_block->conf_zone->name, 8, "%s", "CONF");
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_conf_zone_t);
+
+	/* 3) core zone */
+	offset = ALIGN_UP_8(offset);
+	ctl_block->entry_table256[GNB_CTL_CORE] = offset;
+	block = (gnb_block64_t *)((char *)memory + offset);
+	block->size = sizeof(gnb_ctl_core_zone_t) + core_payload;
+	ctl_block->core_zone = (gnb_ctl_core_zone_t *)block->data;
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_core_zone_t) + core_payload;
+
+	/* 4) status zone */
+	offset = ALIGN_UP_8(offset);
+	ctl_block->entry_table256[GNB_CTL_STATUS] = offset;
+	block = (gnb_block64_t *)((char *)memory + offset);
+	block->size = sizeof(gnb_ctl_status_zone_t);
+	ctl_block->status_zone = (gnb_ctl_status_zone_t *)block->data;
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_status_zone_t);
+
+	/* 5) node zone */
+	offset = ALIGN_UP_8(offset);
+	ctl_block->entry_table256[GNB_CTL_NODE] = offset;
+	block = (gnb_block64_t *)((char *)memory + offset);
+	block->size = sizeof(gnb_ctl_node_zone_t) + sizeof(gnb_node_t) * node_num;
+	ctl_block->node_zone = (gnb_ctl_node_zone_t *)block->data;
+	snprintf((char *)ctl_block->node_zone->name, 8, "%s", "NODE");
+	ctl_block->node_zone->node_num = node_num;
+	offset = offset + sizeof(gnb_block64_t);
+	offset = offset + sizeof(gnb_ctl_node_zone_t)
+		   + (uint64_t)sizeof(gnb_node_t) * (uint64_t)node_num;
+
+	/* 与 gnb_ctl_block_size() 必须逐字节一致; 不一致说明两处布局漂移, 立即暴露而非静默越界 */
+	if ( offset != gnb_ctl_block_size(payload_block_size, node_num, pf_worker_num) ) {
+		fprintf(stderr, "gnb_ctl_block: layout mismatch (offset=%" PRIu64 ")\n", offset);
+		abort();
+	}
+
+	return ctl_block;
 }
 
 void gnb_ctl_block_build_finish(void *memory) {
@@ -95,17 +205,17 @@ void gnb_ctl_block_build_finish(void *memory) {
 }
 
 void gnb_ctl_block_setup(gnb_ctl_block_t *ctl_block, void *memory) {
-    gnb_block32_t *block;
+    gnb_block64_t *block;
     ctl_block->entry_table256 = memory;
-    block = memory + ctl_block->entry_table256[GNB_CTL_MAGIC_NUMBER];
+    block = (gnb_block64_t *)(memory + ctl_block->entry_table256[GNB_CTL_MAGIC_NUMBER]);
     ctl_block->magic_number = (gnb_ctl_magic_number_t *)block->data;
     block = memory + ctl_block->entry_table256[GNB_CTL_CONF];
     ctl_block->conf_zone = (gnb_ctl_conf_zone_t *)block->data;
-    block = memory + ctl_block->entry_table256[GNB_CTL_CORE];
+    block = (gnb_block64_t *)(memory + ctl_block->entry_table256[GNB_CTL_CORE]);
     ctl_block->core_zone = (gnb_ctl_core_zone_t *)block->data;
-    block = memory + ctl_block->entry_table256[GNB_CTL_STATUS];
+    block = (gnb_block64_t *)(memory + ctl_block->entry_table256[GNB_CTL_STATUS]);
     ctl_block->status_zone = (gnb_ctl_status_zone_t *)block->data;
-    block = memory + ctl_block->entry_table256[GNB_CTL_NODE];
+    block = (gnb_block64_t *)(memory + ctl_block->entry_table256[GNB_CTL_NODE]);
     ctl_block->node_zone = (gnb_ctl_node_zone_t *)block->data;
 }
 

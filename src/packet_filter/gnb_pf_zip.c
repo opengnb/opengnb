@@ -89,13 +89,14 @@ static int pf_tun_route_cb(gnb_core_t *gnb_core, gnb_pf_t *pf, gnb_pf_ctx_t *pf_
     ctx->deflate_strm.next_in   = pf_ctx->ip_frame;
     ctx->deflate_strm.avail_in  = pf_ctx->ip_frame_size;
     ctx->deflate_strm.next_out  = ctx->deflated_payload->data + frame_header_size;
-    ctx->deflate_strm.avail_out = gnb_core->conf->payload_block_size;
+    // 使用带安全余量的 payload_in_block_size，彻底杜绝输出溢出
+    ctx->deflate_strm.avail_out = gnb_core->conf->payload_in_block_size;
     ret = deflate(&ctx->deflate_strm, Z_FINISH);
     if ( ret != Z_STREAM_END ) {
         return GNB_PF_ERROR;
     }
     // deflate_chunk_size is new ip_frame_size
-    deflate_chunk_size = gnb_core->conf->payload_block_size - ctx->deflate_strm.avail_out;
+    deflate_chunk_size = gnb_core->conf->payload_in_block_size - ctx->deflate_strm.avail_out;
     if ( deflate_chunk_size >= gnb_core->conf->payload_block_size ) {
         return GNB_PF_ERROR;
     }
@@ -124,6 +125,7 @@ static int pf_tun_route_cb(gnb_core_t *gnb_core, gnb_pf_t *pf, gnb_pf_ctx_t *pf_
     //重新指定 ip_frame 位置 和 ip_frame_size
     pf_ctx->ip_frame = pf_ctx->fwd_payload->data + frame_header_size;
     pf_ctx->ip_frame_size = deflate_chunk_size;
+
 skip_deflate:
     return GNB_PF_NEXT;
 }
@@ -150,15 +152,20 @@ static int pf_inet_route(gnb_core_t *gnb_core, gnb_pf_t *pf, gnb_pf_ctx_t *pf_ct
     gnb_pf_private_ctx_t *ctx = pf->private_ctx;
     inflateReset(&ctx->inflate_strm);
     in_payload_data_len = gnb_payload16_data_len(pf_ctx->fwd_payload);
+    // 数据长度必须大于头部偏移，防止无符号减法下溢
+    if ( in_payload_data_len <= frame_header_size ) {
+        return GNB_PF_ERROR;
+    }
     ctx->inflate_strm.next_in   = pf_ctx->fwd_payload->data + frame_header_size;
     ctx->inflate_strm.avail_in  = in_payload_data_len - frame_header_size;
     ctx->inflate_strm.next_out  = ctx->inflate_payload->data + frame_header_size;
-    ctx->inflate_strm.avail_out = gnb_core->conf->payload_block_size;
+    //使用带安全余量的 payload_in_block_size,彻底杜绝解压膨胀写穿缓冲区
+    ctx->inflate_strm.avail_out = gnb_core->conf->payload_in_block_size;
     ret = inflate(&ctx->inflate_strm, Z_FINISH);
     if ( ret != Z_STREAM_END ) {
         return  GNB_PF_ERROR;
     }
-    inflate_chunk_size = gnb_core->conf->payload_block_size - ctx->inflate_strm.avail_out;
+    inflate_chunk_size = gnb_core->conf->payload_in_block_size - ctx->inflate_strm.avail_out;
     GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "Inflate payload size=%d inflate_chunk_size=%d\n", in_payload_data_len, inflate_chunk_size);
     ctx->inflate_payload->type     = pf_ctx->fwd_payload->type;
     ctx->inflate_payload->sub_type = pf_ctx->fwd_payload->sub_type;

@@ -64,16 +64,16 @@ static void close_log_file_pre_fd(gnb_log_ctx_t *log) {
 }
 
 static void log_file_output(gnb_log_ctx_t *log, uint8_t log_type, char *log_string, int log_string_len) {
-    int ret;
+	ssize_t rc;
     switch (log_type) {
         case GNB_LOG_TYPE_STD:
-            ret = write(log->std_fd, log_string, log_string_len);
+			rc = write(log->std_fd, log_string, log_string_len);
             break;
         case GNB_LOG_TYPE_DEBUG:
-            ret = write(log->debug_fd, log_string, log_string_len);
+			rc = write(log->debug_fd, log_string, log_string_len);
             break;
         case GNB_LOG_TYPE_ERROR:
-            ret = write(log->error_fd, log_string, log_string_len);
+			rc = write(log->error_fd, log_string, log_string_len);
             break;
         default:
             break;
@@ -81,7 +81,7 @@ static void log_file_output(gnb_log_ctx_t *log, uint8_t log_type, char *log_stri
 }
 
 static void log_console_output(int log_type, char *log_string, int log_string_len) {
-    int rc;
+	ssize_t rc;
     switch (log_type) {
         case GNB_LOG_TYPE_STD:
         case GNB_LOG_TYPE_DEBUG:
@@ -252,6 +252,18 @@ int gnb_log_udp_set_addr4_string(gnb_log_ctx_t *log, char *sockaddress4_string){
     return 0;
 }
 
+void gnb_log_udp_close(gnb_log_ctx_t *log) {
+#ifdef __UNIX_LIKE_OS__
+	close(log->socket6_fd);
+	close(log->socket4_fd);
+#endif
+
+#ifdef _WIN32
+	closesocket(log->socket6_fd);
+	closesocket(log->socket4_fd);
+#endif
+}
+
 void gnb_log_ctx_init(gnb_log_ctx_t *log) {
     memset(log, 0, sizeof(gnb_log_ctx_t));
     log->std_fd   = -1;
@@ -264,31 +276,67 @@ void gnb_log_ctx_init(gnb_log_ctx_t *log) {
     log->socket4_fd    = -1;
 }
 
-int gnb_log_file_rotate(gnb_log_ctx_t *log) {
+int gnb_log_file_open_rotate(gnb_log_ctx_t *log, int force) {
     char now_time_string[GNB_TIME_STRING_MAX];
     char archive_name[PATH_MAX+NAME_MAX];
-    int mday = gnb_now_mday();
-    if (mday == log->pre_mday) {
-        close_log_file_pre_fd(log);
-        return 0;
-    }
+
     if ( !(log->output_type & GNB_LOG_OUTPUT_FILE) ) {
         return 1;
     }
+
+    int mday = gnb_now_mday();
+    if ( !force && mday == log->pre_mday ) {
+        close_log_file_pre_fd(log);
+        return 0;
+    }
+
     log->pre_mday = mday;
-    gnb_now_timef("%Y_%m_%d",now_time_string,GNB_TIME_STRING_MAX);
-    snprintf(archive_name, PATH_MAX+NAME_MAX, "%s/std_%s.log.arc", log->log_file_path, now_time_string);
-    rename( (const char *)log->log_file_name_std, (const char *)archive_name );
+    close_log_file_pre_fd(log);
 
-    log->pre_std_fd    = log->std_fd;
-    log->pre_debug_fd  = log->debug_fd;
-    snprintf(archive_name, PATH_MAX+NAME_MAX, "%s/debug_%s.log.arc", log->log_file_path, now_time_string);
-    rename( (const char *)log->log_file_name_debug, (const char *)archive_name );
+    if ( log->std_fd > 0 || log->debug_fd > 0 || log->error_fd > 0 ) {
+        gnb_now_timef("%Y_%m_%d_%H.%M.%S", now_time_string, GNB_TIME_STRING_MAX);
 
-    log->pre_error_fd  = log->error_fd;
-    snprintf(archive_name, PATH_MAX+NAME_MAX, "%s/error_%s.log.arc", log->log_file_path, now_time_string);
-    rename( (const char *)log->log_file_name_error, (const char *)archive_name );
+        snprintf(archive_name, PATH_MAX+NAME_MAX, "%s/std_%s.arc.log", log->log_file_path, now_time_string);
+        rename((const char *)log->log_file_name_std, (const char *)archive_name);
+        log->pre_std_fd = log->std_fd;
+
+        snprintf(archive_name, PATH_MAX+NAME_MAX, "%s/debug_%s.arc.log", log->log_file_path, now_time_string);
+        rename((const char *)log->log_file_name_debug, (const char *)archive_name);
+        log->pre_debug_fd = log->debug_fd;
+
+        snprintf(archive_name, PATH_MAX+NAME_MAX, "%s/error_%s.arc.log", log->log_file_path, now_time_string);
+        rename((const char *)log->log_file_name_error, (const char *)archive_name);
+        log->pre_error_fd = log->error_fd;
+    }
 
     open_log_file(log);
     return 0;
+}
+
+void gnb_log_close(gnb_log_ctx_t *log) {
+	if ( log->pre_std_fd > 0 ) {
+		close(log->pre_std_fd);
+		log->pre_std_fd = -1;
+	}
+	if ( log->pre_debug_fd > 0 ) {
+		close(log->pre_debug_fd);
+		log->pre_debug_fd = -1;
+	}
+	if ( log->pre_error_fd > 0 ) {
+		close(log->pre_error_fd);
+		log->pre_error_fd = -1;
+	}
+	if ( log->std_fd > 0 ) {
+		close(log->std_fd);
+		log->std_fd = -1;
+	}
+	if ( log->debug_fd > 0 ) {
+		close(log->debug_fd);
+		log->debug_fd = -1;
+	}
+	if ( log->error_fd > 0 ) {
+		close(log->error_fd);
+		log->error_fd = -1;
+	}
+
 }

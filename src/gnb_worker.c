@@ -85,6 +85,26 @@ void gnb_worker_wait_primary_worker_started(gnb_core_t *gnb_core) {
     } while(1);
 }
 
+void gnb_worker_wait_worker_started(gnb_core_t *gnb_core, gnb_worker_t *worker) {
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "WAIT worker [%s] started...\n", worker->name);
+    do {
+        if ( 1 == worker->thread_worker_run_flag ) {
+            break;
+        }
+    } while(1);
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "WORKER [%s] is started!\n", worker->name);
+}
+
+void gnb_worker_wait_worker_stoped(gnb_core_t *gnb_core, gnb_worker_t *worker) {
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "WAIT worker [%s] stoped...\n", worker->name);
+    do {
+        if ( 0 == worker->thread_worker_run_flag ) {
+            break;
+        }
+    } while(1);
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "WORKER [%s] is stoped!\n", worker->name);
+}
+
 void gnb_worker_sync_time(uint64_t *now_time_sec_ptr, uint64_t *now_time_usec_ptr) {
     struct timeval now_timeval;
     gettimeofday(&now_timeval, NULL);

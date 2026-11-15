@@ -25,10 +25,10 @@
 
 #pragma pack(push, 1)
 typedef struct _gnb_payload16_t{
-	uint16_t size;
-	unsigned char type;
-	unsigned char sub_type;
-	unsigned char data[0];
+    uint16_t size;
+    unsigned char type;
+    unsigned char sub_type;
+    unsigned char data[0];
 } __attribute__ ((packed)) gnb_payload16_t;
 #pragma pack(pop)
 
@@ -41,16 +41,16 @@ uint16_t gnb_payload16_set_data_len(gnb_payload16_t *gnb_payload16, uint16_t new
 uint16_t gnb_payload16_data_len(gnb_payload16_t *gnb_payload16);
 
 typedef struct _gnb_payload16_ctx_t {
-	//当前 当前payload(frame) 已收到的字节数
-	//r_len足2字节时，接收的数据存 gnb_payload
-	//r_len 不足2字节时，接收的数据存 buffer
-	int r_len;
-	unsigned char buffer[2];
-	//传入payload
-	gnb_payload16_t *gnb_payload16;
-	//传入的 payload 内存块大小
-	uint32_t max_payload_size;
-	void *udata;
+    //当前 当前payload(frame) 已收到的字节数
+    //r_len足2字节时，接收的数据存 gnb_payload
+    //r_len 不足2字节时，接收的数据存 buffer
+    int r_len;
+    unsigned char buffer[2];
+    //传入payload
+    gnb_payload16_t *gnb_payload16;
+    //传入的 payload 内存块大小
+    uint32_t max_payload_size;
+    void *udata;
 } gnb_payload16_ctx_t;
 
 gnb_payload16_ctx_t* gnb_payload16_ctx_init(gnb_payload16_ctx_t *gnb_payload16_ctx, gnb_payload16_t *gnb_payload16, uint16_t max_payload_size);

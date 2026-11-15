@@ -25,10 +25,10 @@
 #define GNB_ARG_MAX_SIZE        1024
 
 typedef struct _gnb_arg_list_t {
-	uint32_t size;
+    uint32_t size;
     int argc;
-	char data[GNB_ARG_STRING_MAX_SIZE];
-	char *data_prt;
+    char data[GNB_ARG_STRING_MAX_SIZE];
+    char *data_prt;
     char *argv[0];
 } gnb_arg_list_t;
 

@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include "gnb_def.h"
 
 typedef struct _gnb_heap_fragment_t gnb_heap_fragment_t;
 

@@ -25,9 +25,6 @@ void gnb_doubly_linked_list_node_set(gnb_doubly_linked_list_node_t *doubly_linke
 
 gnb_doubly_linked_list_t* gnb_doubly_linked_list_create(gnb_heap_t *heap) {
     gnb_doubly_linked_list_t *doubly_linked_list = (gnb_doubly_linked_list_t *)gnb_heap_alloc(heap,sizeof(gnb_doubly_linked_list_t));
-    if ( NULL==doubly_linked_list ) {
-        return NULL;
-    }
     memset(doubly_linked_list,0,sizeof(gnb_doubly_linked_list_t));
     doubly_linked_list->heap = heap;
     return doubly_linked_list;

@@ -30,27 +30,27 @@ char *gnb_bin2hex(void *bin, size_t bin_size, char *hex_string);
 void *gnb_hex2bin(char *hex_string, void *bin, size_t bin_size);
 
 typedef struct _gnb_hex_string8_t {
-	char value[8+1];
+    char value[8+1];
 } gnb_hex_string8_t;
 
 typedef struct _gnb_hex_string16_t {
-	char value[16+1];
+    char value[16+1];
 } gnb_hex_string16_t;
 
 typedef struct _gnb_hex_string32_t {
-	char value[32+1];
+    char value[32+1];
 } gnb_hex_string32_t;
 
 typedef struct _gnb_hex_string64_t {
-	char value[64+1];
+    char value[64+1];
 } gnb_hex_string64_t;
 
 typedef struct _gnb_hex_string128_t {
-	char value[128+1];
+    char value[128+1];
 } gnb_hex_string128_t;
 
 typedef struct _gnb_hex_string256_t {
-	char value[256+1];
+    char value[256+1];
 } gnb_hex_string256_t;
 
 char * gnb_get_hex_string8(void *byte4, char *dest);

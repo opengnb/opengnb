@@ -84,8 +84,9 @@ GNB_ES_OBJS =                                    \
 
 GNB_CTL_OBJS =                                   \
        ./src/cli/gnb_ctl.o                       \
-       ./src/gnb_alloc.o                         \
        ./src/ctl/gnb_ctl_dump.o                  \
+       ./src/ctl/gnb_ctl_core_rw.o               \
+       ./src/gnb_arg_list.o                      \
        ./src/gnb_ctl_block.o                     \
        ./src/gnb_ctl_block_set.o                 \
        ./src/gnb_binary.o                        \
@@ -95,6 +96,7 @@ GNB_CTL_OBJS =                                   \
        ./src/gnb_udp.o                           \
        ./src/gnb_mmap.o                          \
        ./src/gnb_nodeid.o                        \
+       ./src/gnb_alloc.o                         \
        ./libs/ed25519/sha512.o
 
 GNB_CORE_OBJS += ./src/gnb_mod_register.o

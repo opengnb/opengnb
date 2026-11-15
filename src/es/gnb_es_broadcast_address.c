@@ -82,7 +82,7 @@ static void broadcast_address_to_node(gnb_es_ctx *es_ctx, gnb_node_t *src_node) 
     gnb_ctl_block_t  *ctl_block;
     gnb_node_t *dst_node;
     gnb_log_ctx_t *log;
-    int node_num;
+	gnb_uint64_t node_num;
     int i;
     ctl_block = es_ctx->ctl_block;
     log = es_ctx->log;
@@ -115,8 +115,8 @@ static void broadcast_address_to_node(gnb_es_ctx *es_ctx, gnb_node_t *src_node) 
 void gnb_broadcast_address(gnb_es_ctx *es_ctx) {
     gnb_ctl_block_t  *ctl_block;
     gnb_node_t *node;
-    int node_num;
-    int i;
+	gnb_uint64_t node_num;
+	gnb_uint64_t i;
     ctl_block = es_ctx->ctl_block;
     node_num = ctl_block->node_zone->node_num;
     if ( 0 == node_num ) {

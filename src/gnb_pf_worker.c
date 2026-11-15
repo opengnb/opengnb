@@ -165,21 +165,19 @@ static void init(gnb_worker_t *gnb_worker, void *ctx) {
     }
 
 skip_crypto:
-
     gnb_pf_init(gnb_core, pf_core->pf_install_array);
     gnb_pf_core_conf(gnb_core, pf_core);
     gnb_pf_init(gnb_core, pf_core->pf_install_array);
     gnb_pf_conf(gnb_core, pf_core->pf_install_array);
-
     p = gnb_worker->name;
     gnb_worker->name = (char *)gnb_heap_alloc(gnb_core->heap, 16);
     snprintf(gnb_worker->name, 16, "%s_%d", p, gnb_core->pf_worker_ring->cur_idx);
-    memory_size = gnb_ring_buffer_fixed_sum_size(sizeof(gnb_payload16_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_in_queue_length);
+    memory_size = gnb_ring_buffer_fixed_sum_size(sizeof(gnb_worker_queue_data_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_in_queue_length);
     memory = gnb_heap_alloc(gnb_core->heap, memory_size);
-    gnb_worker->ring_buffer_in = gnb_ring_buffer_fixed_init(memory, sizeof(gnb_payload16_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_in_queue_length);
-    memory_size = gnb_ring_buffer_fixed_sum_size(sizeof(gnb_payload16_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_out_queue_length);
+    gnb_worker->ring_buffer_in = gnb_ring_buffer_fixed_init(memory, sizeof(gnb_worker_queue_data_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_in_queue_length);
+    memory_size = gnb_ring_buffer_fixed_sum_size(sizeof(gnb_worker_queue_data_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_out_queue_length);
     memory = gnb_heap_alloc(gnb_core->heap, memory_size);
-    gnb_worker->ring_buffer_out = gnb_ring_buffer_fixed_init(memory, sizeof(gnb_payload16_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_out_queue_length);
+    gnb_worker->ring_buffer_out = gnb_ring_buffer_fixed_init(memory, sizeof(gnb_worker_queue_data_t) + gnb_core->conf->payload_block_size, gnb_core->conf->pf_woker_out_queue_length);
     gnb_worker->ctx = pf_worker_ctx;
     GNB_LOG1(gnb_core->log, GNB_LOG_ID_PF, "%s init finish\n", gnb_worker->name);
 }
@@ -202,6 +200,7 @@ static int stop(gnb_worker_t *gnb_worker) {
     pf_worker_ctx_t *pf_worker_ctx =  (pf_worker_ctx_t *)gnb_worker->ctx;
     gnb_core_t *gnb_core = pf_worker_ctx->gnb_core;
     gnb_worker->thread_worker_flag = 0;
+    GNB_LOG1(gnb_core->log, GNB_LOG_ID_PF, "try to stop %s ...\n", gnb_worker->name);
     return 0;
 }
 
