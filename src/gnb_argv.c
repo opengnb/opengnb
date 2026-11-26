@@ -287,12 +287,12 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
       { "systemd",   no_argument,   0, SET_SYSTEMD_DAEMON },
 #endif
 
-      { "es-argv",                   required_argument,  0,   'e' },
+      { "es-argv",                    required_argument,  0,   'e' },
 
-      { "node-woker-queue",          required_argument,  0, SET_NODE_WORKER_QUEUE },
-      { "index-woker-queue",         required_argument,  0, SET_INDEX_WORKER_QUEUE },
-      { "index-woker-service-queue", required_argument,  0, SET_INDEX_SERVICE_WORKER_QUEUE },
-      { "packet-filter-woker-queue", required_argument,  0, SET_PACKET_FILTER_WORKER_QUEUE },
+      { "node-worker-queue",          required_argument,  0, SET_NODE_WORKER_QUEUE },
+      { "index-worker-queue",         required_argument,  0, SET_INDEX_WORKER_QUEUE },
+      { "index-worker-service-queue", required_argument,  0, SET_INDEX_SERVICE_WORKER_QUEUE },
+      { "packet-filter-woker-queue",  required_argument,  0, SET_PACKET_FILTER_WORKER_QUEUE },
     
       { "port-detect",               required_argument,  0, SET_PORT_DETECT },
 
